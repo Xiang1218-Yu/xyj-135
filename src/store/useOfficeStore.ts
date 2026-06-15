@@ -426,8 +426,42 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   addColleague: (colleagueData) => {
     const state = get();
     const theme = state.getCustomizedTheme();
-    const deskIndex = state.colleagues.length;
-    const desk = theme.layout.desks[deskIndex] || theme.layout.desks[deskIndex % theme.layout.desks.length];
+    const currentColleagueCount = state.colleagues.length;
+    const deskCount = theme.layout.desks.length;
+    
+    let desk: DeskLayout;
+    
+    if (currentColleagueCount < deskCount) {
+      desk = theme.layout.desks[currentColleagueCount];
+    } else {
+      const extraIndex = currentColleagueCount - deskCount;
+      const cols = 3;
+      const row = Math.floor(extraIndex / cols);
+      const col = extraIndex % cols;
+      const startX = 25;
+      const startY = 75;
+      const xSpacing = 20;
+      const ySpacing = 18;
+      const newDeskX = startX + col * xSpacing;
+      const newDeskY = startY + row * ySpacing;
+      
+      desk = {
+        x: newDeskX,
+        y: newDeskY,
+        label: colleagueData.name,
+      };
+      
+      if (!state.customization.enabled) {
+        state.setCustomizationEnabled(true);
+      }
+      
+      const currentDesks = state.customization.layoutOverrides.desks.length > 0
+        ? [...state.customization.layoutOverrides.desks]
+        : theme.layout.desks.map((d) => ({ ...d }));
+      
+      const newDesks = [...currentDesks, desk];
+      state.updateCustomLayoutItem('desks', newDesks);
+    }
     
     const newColleague: Colleague = {
       id: colleagueData.id || `colleague-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
