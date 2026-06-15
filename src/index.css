@@ -47,6 +47,120 @@ body {
   50% { opacity: 0.7; }
 }
 
+@keyframes rain-fall {
+  0% {
+    transform: translateY(-10vh) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(-5px);
+    opacity: 0;
+  }
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(var(--sway, 20px)) rotate(180deg);
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(110vh) translateX(calc(var(--sway, 20px) * -0.5)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes cloud-drift {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(calc(100vw + 100%));
+  }
+}
+
+@keyframes sun-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.5;
+  }
+}
+
+@keyframes sun-rays-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes lightning-flash {
+  0%, 100% {
+    opacity: 0;
+  }
+  92% {
+    opacity: 0;
+  }
+  93% {
+    opacity: calc(var(--lightning-intensity, 0.7) * 0.8);
+  }
+  94% {
+    opacity: 0;
+  }
+  96% {
+    opacity: calc(var(--lightning-intensity, 0.7) * 0.5);
+  }
+  97% {
+    opacity: 0;
+  }
+}
+
+.weather-rain-drop {
+  animation: rain-fall linear infinite;
+}
+
+.weather-snow-flake {
+  animation: snow-fall linear infinite;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(220, 230, 245, 0.6) 100%);
+}
+
+.weather-cloud {
+  animation: cloud-drift linear infinite;
+}
+
+.weather-sun-glow {
+  animation: sun-pulse 4s ease-in-out infinite;
+}
+
+.weather-sun-rays {
+  animation: sun-rays-rotate 60s linear infinite;
+}
+
+.weather-lightning {
+  animation: lightning-flash 8s ease-in-out infinite;
+}
+
 .animate-float {
   animation: float 2s ease-in-out infinite;
 }

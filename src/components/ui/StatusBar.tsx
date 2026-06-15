@@ -1,9 +1,10 @@
 import { useOfficeStore } from '@/store/useOfficeStore';
 import { formatTime, getGreeting } from '@/utils/timeUtils';
+import { getWeatherLabel, getWeatherEmoji } from '@/hooks/useWeatherSimulation';
 import { Clock, Users, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 
 export function StatusBar() {
-  const { time, colleagues, isMuted, toggleMute, isPlaying, togglePlay, masterVolume } = useOfficeStore();
+  const { time, colleagues, isMuted, toggleMute, isPlaying, togglePlay, masterVolume, weather } = useOfficeStore();
   
   const presentColleagues = colleagues.filter(c => c.state !== 'away').length;
 
@@ -28,6 +29,11 @@ export function StatusBar() {
             <span className="text-sm font-medium">
               {presentColleagues}/{colleagues.length} 人在工位
             </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-white bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm">
+            <span className="text-base">{getWeatherEmoji(weather.current)}</span>
+            <span className="text-sm font-medium">{getWeatherLabel(weather.current)}</span>
           </div>
         </div>
         

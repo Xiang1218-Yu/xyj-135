@@ -63,6 +63,29 @@ export interface ViewPoint {
 
 export type TimeOfDay = 'morning' | 'noon' | 'afternoon' | 'evening' | 'night';
 
+export type WeatherType = 'sunny' | 'cloudy' | 'rainy' | 'snowy';
+
+export interface WeatherState {
+  current: WeatherType;
+  previous: WeatherType;
+  transitionProgress: number;
+  intensity: number;
+  isAutoMode: boolean;
+  autoChangeInterval: number;
+}
+
+export interface WeatherLightingConfig {
+  ambientColor: string;
+  lightColor: string;
+  shadowOpacity: number;
+  windowLightIntensity: number;
+  ceilingLightIntensity: number;
+  bgTopAdjust: string;
+  bgBottomAdjust: string;
+  fogOpacity: number;
+  fogColor: string;
+}
+
 export interface OfficeTime {
   hour: number;
   minute: number;

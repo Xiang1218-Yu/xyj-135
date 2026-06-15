@@ -3,9 +3,11 @@ import { useOfficeStore } from '@/store/useOfficeStore';
 import { OfficeLayout } from './OfficeLayout';
 import { ColleagueAvatar } from './ColleagueAvatar';
 import { Lighting } from './Lighting';
+import { WeatherEffects } from './WeatherEffects';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { useTimeSimulation } from '@/hooks/useTimeSimulation';
 import { useColleagueAI } from '@/hooks/useColleagueAI';
+import { useWeatherSimulation } from '@/hooks/useWeatherSimulation';
 
 export function OfficeScene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,6 +23,7 @@ export function OfficeScene() {
   const { initAudioContext, isAudioReady } = useAudioEngine();
   useTimeSimulation();
   useColleagueAI();
+  useWeatherSimulation();
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -110,6 +113,7 @@ export function OfficeScene() {
           }}
         >
           <Lighting />
+          <WeatherEffects />
           <OfficeLayout />
           
           {colleagues.map((colleague) => (

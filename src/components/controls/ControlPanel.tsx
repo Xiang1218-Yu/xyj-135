@@ -3,14 +3,16 @@ import { useOfficeStore } from '@/store/useOfficeStore';
 import { AudioControls } from './AudioControls';
 import { ViewSelector } from './ViewSelector';
 import { TimeControls } from './TimeControls';
-import { Volume2, Map, Clock, X, Menu } from 'lucide-react';
+import { WeatherControls } from './WeatherControls';
+import { Volume2, Map, Clock, X, Menu, Cloud } from 'lucide-react';
 
-type Tab = 'audio' | 'view' | 'time';
+type Tab = 'audio' | 'view' | 'time' | 'weather';
 
 const tabs = [
   { id: 'audio' as Tab, label: '声音', icon: Volume2 },
   { id: 'view' as Tab, label: '视角', icon: Map },
   { id: 'time' as Tab, label: '时间', icon: Clock },
+  { id: 'weather' as Tab, label: '天气', icon: Cloud },
 ];
 
 export function ControlPanel() {
@@ -72,6 +74,7 @@ export function ControlPanel() {
             {activeTab === 'audio' && <AudioControls />}
             {activeTab === 'view' && <ViewSelector />}
             {activeTab === 'time' && <TimeControls />}
+            {activeTab === 'weather' && <WeatherControls />}
           </div>
           
           <div className="px-5 py-3 border-t border-gray-100 text-center text-xs text-gray-400">

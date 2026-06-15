@@ -1,5 +1,6 @@
 import { useOfficeStore } from '@/store/useOfficeStore';
 import { getTimeOfDay } from '@/utils/timeUtils';
+import { weatherLightingConfigs } from '@/hooks/useWeatherSimulation';
 import type { TimeOfDay } from '@/types/office';
 
 interface LightingConfig {
@@ -60,17 +61,44 @@ const lightingConfigs: Record<TimeOfDay, LightingConfig> = {
   },
 };
 
+function lerpColor(a: string, b: string, t: number): string {
+  const parseHex = (hex: string) => {
+    const h = hex.replace('#', '');
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  };
+  const [ar, ag, ab] = parseHex(a);
+  const [br, bg, bb] = parseHex(b);
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
+}
+
 export function Lighting() {
-  const { time } = useOfficeStore();
+  const { time, weather } = useOfficeStore();
   const timeOfDay = getTimeOfDay(time.hour);
   const config = lightingConfigs[timeOfDay];
+  const weatherConfig = weatherLightingConfigs[weather.current];
+  const t = weather.transitionProgress;
+  const intensity = weather.intensity;
+
+  const effectiveShadowOpacity = config.shadowOpacity + weatherConfig.shadowOpacity * intensity * t;
+  const effectiveAmbientIntensity = config.ambientIntensity * (1 - t * (1 - weatherConfig.windowLightIntensity) * intensity * 0.5);
+  const effectiveDirectionalIntensity = config.directionalIntensity * (1 - t * (1 - weatherConfig.windowLightIntensity) * intensity * 0.6);
+
+  const effectiveBgTop = t > 0 && intensity > 0
+    ? lerpColor(config.bgTop, weatherConfig.bgTopAdjust.replace(/rgba?\([^,]+,[^,]+,[^,]+,\s*[\d.]+\)/, config.bgTop), t * intensity * 0.5)
+    : config.bgTop;
+  const effectiveBgBottom = t > 0 && intensity > 0
+    ? lerpColor(config.bgBottom, weatherConfig.bgBottomAdjust.replace(/rgba?\([^,]+,[^,]+,[^,]+,\s*[\d.]+\)/, config.bgBottom), t * intensity * 0.5)
+    : config.bgBottom;
 
   return (
     <>
       <div
         className="absolute inset-0 pointer-events-none transition-all duration-1000"
         style={{
-          background: `linear-gradient(180deg, ${config.bgTop} 0%, ${config.bgBottom} 100%)`,
+          background: `linear-gradient(180deg, ${effectiveBgTop} 0%, ${effectiveBgBottom} 100%)`,
         }}
       />
       
@@ -78,7 +106,7 @@ export function Lighting() {
         className="absolute inset-0 pointer-events-none transition-all duration-1000"
         style={{
           background: `radial-gradient(ellipse at 30% 10%, ${config.directionalLight} 0%, transparent 60%)`,
-          opacity: config.directionalIntensity,
+          opacity: effectiveDirectionalIntensity,
         }}
       />
       
@@ -86,14 +114,14 @@ export function Lighting() {
         className="absolute inset-0 pointer-events-none transition-all duration-1000"
         style={{
           background: `radial-gradient(circle at 50% 50%, ${config.ambientLight} 0%, transparent 70%)`,
-          opacity: config.ambientIntensity,
+          opacity: effectiveAmbientIntensity,
         }}
       />
       
       <div
         className="absolute inset-0 pointer-events-none transition-all duration-1000"
         style={{
-          boxShadow: `inset 0 0 150px rgba(0, 0, 0, ${config.shadowOpacity})`,
+          boxShadow: `inset 0 0 150px rgba(0, 0, 0, ${effectiveShadowOpacity})`,
         }}
       />
       
@@ -103,6 +131,25 @@ export function Lighting() {
           background: 'linear-gradient(225deg, rgba(255,255,255,0.1) 0%, transparent 50%)',
         }}
       />
+
+      {weatherConfig.ceilingLightIntensity > 0 && t > 0 && (
+        <div
+          className="absolute inset-0 pointer-events-none transition-all duration-1000"
+          style={{
+            background: `radial-gradient(ellipse at 50% 0%, rgba(255, 250, 230, ${weatherConfig.ceilingLightIntensity * t * intensity * 0.3}) 0%, transparent 50%)`,
+          }}
+        />
+      )}
+
+      {weatherConfig.fogOpacity > 0 && t > 0 && (
+        <div
+          className="absolute inset-0 pointer-events-none transition-all duration-1500"
+          style={{
+            background: `radial-gradient(ellipse at 30% 15%, ${weatherConfig.fogColor} 0%, transparent 60%), radial-gradient(ellipse at 70% 10%, ${weatherConfig.fogColor} 0%, transparent 50%)`,
+            opacity: weatherConfig.fogOpacity * t * intensity,
+          }}
+        />
+      )}
     </>
   );
 }

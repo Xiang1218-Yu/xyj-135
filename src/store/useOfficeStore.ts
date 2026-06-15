@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay } from '@/types/office';
+import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType } from '@/types/office';
 import { audioSources as initialAudioSources } from '@/data/audioSources';
 import { colleagues as initialColleagues } from '@/data/colleagues';
 import { viewPoints } from '@/data/viewPoints';
@@ -14,6 +14,7 @@ interface OfficeState {
   audioSources: AudioSource[];
   colleagues: Colleague[];
   time: OfficeTime;
+  weather: WeatherState;
   currentView: string;
   showControlPanel: boolean;
   showViewSelector: boolean;
@@ -35,6 +36,12 @@ interface OfficeState {
   toggleViewSelector: () => void;
   getViewPoints: () => ViewPoint[];
   getTimeOfDay: () => TimeOfDay;
+  setWeather: (weather: WeatherType) => void;
+  updateWeatherTransition: (progress: number) => void;
+  setWeatherAutoMode: (enabled: boolean) => void;
+  setWeatherAutoInterval: (interval: number) => void;
+  setWeatherIntensity: (intensity: number) => void;
+  isTimePaused: boolean;
 }
 
 const currentHour = new Date().getHours();
@@ -59,6 +66,15 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   currentView: 'overview',
   showControlPanel: true,
   showViewSelector: false,
+  weather: {
+    current: 'sunny',
+    previous: 'sunny',
+    transitionProgress: 1,
+    intensity: 0.7,
+    isAutoMode: true,
+    autoChangeInterval: 30,
+  },
+  isTimePaused: false,
 
   setListenerPosition: (position) => set({ listenerPosition: position }),
   setZoom: (zoom) => set({ zoom: Math.max(0.5, Math.min(2, zoom)) }),
@@ -141,6 +157,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   toggleTimePause: () =>
     set((state) => ({
       time: { ...state.time, isPaused: !state.time.isPaused },
+      isTimePaused: !state.time.isPaused,
     })),
   
   setCurrentView: (viewId) => {
@@ -163,4 +180,34 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   getViewPoints: () => viewPoints,
   
   getTimeOfDay: () => get().time.timeOfDay,
+  
+  setWeather: (weather: WeatherType) =>
+    set((state) => ({
+      weather: {
+        ...state.weather,
+        previous: state.weather.current,
+        current: weather,
+        transitionProgress: 0,
+      },
+    })),
+  
+  updateWeatherTransition: (progress: number) =>
+    set((state) => ({
+      weather: { ...state.weather, transitionProgress: progress },
+    })),
+  
+  setWeatherAutoMode: (enabled: boolean) =>
+    set((state) => ({
+      weather: { ...state.weather, isAutoMode: enabled },
+    })),
+  
+  setWeatherAutoInterval: (interval: number) =>
+    set((state) => ({
+      weather: { ...state.weather, autoChangeInterval: Math.max(5, Math.min(120, interval)) },
+    })),
+  
+  setWeatherIntensity: (intensity: number) =>
+    set((state) => ({
+      weather: { ...state.weather, intensity: Math.max(0, Math.min(1, intensity)) },
+    })),
 }));
