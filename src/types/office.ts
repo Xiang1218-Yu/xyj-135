@@ -13,7 +13,13 @@ export type AudioSourceType =
   | 'typing'
   | 'mouse'
   | 'phone'
-  | 'door';
+  | 'door'
+  | 'footstep'
+  | 'greeting'
+  | 'sip'
+  | 'print-page'
+  | 'meeting-talk'
+  | 'paper-handle';
 
 export interface AudioSource {
   id: string;
@@ -31,7 +37,40 @@ export interface AudioSource {
 
 export type KeyboardType = 'mechanical-loud' | 'mechanical-quiet' | 'membrane' | 'laptop';
 
-export type ColleagueState = 'working' | 'walking' | 'talking' | 'resting' | 'away';
+export type ColleagueState = 
+  | 'working' 
+  | 'walking' 
+  | 'talking' 
+  | 'resting' 
+  | 'away'
+  | 'drinking-coffee'
+  | 'printing'
+  | 'in-meeting'
+  | 'greeting'
+  | 'getting-coffee';
+
+export interface BehaviorPreferences {
+  coffeeFrequency: number;
+  printFrequency: number;
+  meetingFrequency: number;
+  greetingFrequency: number;
+  talkativeness: number;
+  activityLevel: number;
+}
+
+export type BehaviorActionType = 
+  | 'none'
+  | 'go-coffee'
+  | 'drink-coffee'
+  | 'go-printer'
+  | 'printing'
+  | 'go-meeting'
+  | 'meeting'
+  | 'greet'
+  | 'go-desk'
+  | 'go-lunch'
+  | 'leave-office'
+  | 'arrive-office';
 
 export interface Colleague {
   id: string;
@@ -50,6 +89,11 @@ export interface Colleague {
     leaveTime: number;
   };
   speed: number;
+  behaviorPreferences: BehaviorPreferences;
+  currentAction?: BehaviorActionType;
+  actionStartTime?: number;
+  actionDuration?: number;
+  greetingTargetId?: string;
 }
 
 export interface ViewPoint {

@@ -17,6 +17,14 @@ export const colleagues: Colleague[] = [
       leaveTime: 18,
     },
     speed: 0.5,
+    behaviorPreferences: {
+      coffeeFrequency: 0.7,
+      printFrequency: 0.3,
+      meetingFrequency: 0.5,
+      greetingFrequency: 0.8,
+      talkativeness: 0.6,
+      activityLevel: 0.8,
+    },
   },
   {
     id: 'colleague-2',
@@ -34,6 +42,14 @@ export const colleagues: Colleague[] = [
       leaveTime: 18.5,
     },
     speed: 0.55,
+    behaviorPreferences: {
+      coffeeFrequency: 0.9,
+      printFrequency: 0.5,
+      meetingFrequency: 0.6,
+      greetingFrequency: 0.9,
+      talkativeness: 0.8,
+      activityLevel: 0.7,
+    },
   },
   {
     id: 'colleague-3',
@@ -51,6 +67,14 @@ export const colleagues: Colleague[] = [
       leaveTime: 17.5,
     },
     speed: 0.65,
+    behaviorPreferences: {
+      coffeeFrequency: 0.4,
+      printFrequency: 0.8,
+      meetingFrequency: 0.4,
+      greetingFrequency: 0.5,
+      talkativeness: 0.3,
+      activityLevel: 0.6,
+    },
   },
   {
     id: 'colleague-4',
@@ -68,6 +92,14 @@ export const colleagues: Colleague[] = [
       leaveTime: 18,
     },
     speed: 0.5,
+    behaviorPreferences: {
+      coffeeFrequency: 0.8,
+      printFrequency: 0.4,
+      meetingFrequency: 0.7,
+      greetingFrequency: 0.7,
+      talkativeness: 0.7,
+      activityLevel: 0.65,
+    },
   },
   {
     id: 'colleague-5',
@@ -85,6 +117,14 @@ export const colleagues: Colleague[] = [
       leaveTime: 19,
     },
     speed: 0.6,
+    behaviorPreferences: {
+      coffeeFrequency: 0.6,
+      printFrequency: 0.7,
+      meetingFrequency: 0.8,
+      greetingFrequency: 0.6,
+      talkativeness: 0.5,
+      activityLevel: 0.9,
+    },
   },
   {
     id: 'colleague-6',
@@ -102,6 +142,14 @@ export const colleagues: Colleague[] = [
       leaveTime: 18,
     },
     speed: 0.55,
+    behaviorPreferences: {
+      coffeeFrequency: 0.5,
+      printFrequency: 0.6,
+      meetingFrequency: 0.3,
+      greetingFrequency: 0.4,
+      talkativeness: 0.4,
+      activityLevel: 0.5,
+    },
   },
 ];
 

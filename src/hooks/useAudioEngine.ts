@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useOfficeStore } from '@/store/useOfficeStore';
 import { calculateVolume, calculatePan } from '@/utils/audioUtils';
-import type { AudioSource, KeyboardType } from '@/types/office';
+import type { AudioSource, KeyboardType, Position } from '@/types/office';
 import { keyboardVolumeByType, keyboardTimingByType } from '@/data/audioSources';
 
 function createNoiseBuffer(audioContext: AudioContext, type: 'white' | 'pink' | 'brown' = 'white'): AudioBuffer {
@@ -258,6 +258,111 @@ function createPhoneSound(audioContext: AudioContext): AudioBuffer {
   return buffer;
 }
 
+function createFootstepSound(audioContext: AudioContext): AudioBuffer {
+  const duration = 0.15;
+  const sampleRate = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.exp(-t * 40);
+    const lowThud = Math.sin(2 * Math.PI * 80 * t) * Math.exp(-t * 30);
+    const highScuff = (Math.random() * 2 - 1) * Math.exp(-t * 60);
+    data[i] = (lowThud * 0.6 + highScuff * 0.4) * envelope * 0.35;
+  }
+
+  return buffer;
+}
+
+function createGreetingSound(audioContext: AudioContext): AudioBuffer {
+  const duration = 0.35;
+  const sampleRate = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.sin(Math.PI * t / duration) * 0.8;
+    const pitch = 300 + Math.sin(2 * Math.PI * 6 * t) * 80;
+    const formant1 = Math.sin(2 * Math.PI * pitch * t) * 0.4;
+    const formant2 = Math.sin(2 * Math.PI * pitch * 1.6 * t) * 0.25;
+    const noise = (Math.random() * 2 - 1) * 0.1;
+    data[i] = (formant1 + formant2 + noise) * envelope * 0.35;
+  }
+
+  return buffer;
+}
+
+function createSipSound(audioContext: AudioContext): AudioBuffer {
+  const duration = 0.3;
+  const sampleRate = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.sin(Math.PI * t / duration);
+    const slurp = (Math.random() * 2 - 1) * Math.exp(-Math.pow((t - 0.15) * 20, 2));
+    const swallow = Math.sin(2 * Math.PI * 150 * t) * Math.exp(-(t - 0.2) * 15) * 0.3;
+    data[i] = (slurp * 0.7 + swallow) * envelope * 0.35;
+  }
+
+  return buffer;
+}
+
+function createPrintPageSound(audioContext: AudioContext): AudioBuffer {
+  const duration = 0.8;
+  const sampleRate = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const headMove = Math.sin(2 * Math.PI * 8 * t) * 0.15;
+    const printNoise = (Math.random() * 2 - 1) * 0.5;
+    const feedClick = t > 0.7 ? Math.exp(-(t - 0.7) * 30) * 0.4 : 0;
+    const envelope = Math.min(1, t * 5) * Math.min(1, (duration - t) * 5);
+    data[i] = (headMove + printNoise * 0.3 + feedClick) * envelope * 0.3;
+  }
+
+  return buffer;
+}
+
+function createMeetingTalkSound(audioContext: AudioContext): AudioBuffer {
+  const duration = 3;
+  const sampleRate = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const speechEnv = Math.max(0, Math.sin(2 * Math.PI * 1.5 * t) * 0.5 + 0.3);
+    const noise = (Math.random() * 2 - 1);
+    const formant1 = Math.sin(2 * Math.PI * 450 * (1 + Math.sin(t * 2) * 0.08) * t) * 0.25;
+    const formant2 = Math.sin(2 * Math.PI * 900 * (1 + Math.sin(t * 3) * 0.1) * t) * 0.15;
+    data[i] = (formant1 + formant2 + noise * 0.15) * speechEnv * 0.25;
+  }
+
+  return buffer;
+}
+
+function createPaperHandleSound(audioContext: AudioContext): AudioBuffer {
+  const duration = 0.5;
+  const sampleRate = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / sampleRate;
+    const rustle = (Math.random() * 2 - 1) * Math.sin(Math.PI * t / duration);
+    const crisp = (Math.random() * 2 - 1) * Math.exp(-Math.pow((t - 0.25) * 15, 2)) * 0.5;
+    data[i] = (rustle * 0.6 + crisp) * 0.3;
+  }
+
+  return buffer;
+}
+
 interface SoundInstance {
   source: AudioBufferSourceNode;
   gainNode: GainNode;
@@ -294,12 +399,19 @@ export function useAudioEngine() {
   const conversationBufferRef = useRef<AudioBuffer | null>(null);
   const doorBufferRef = useRef<AudioBuffer | null>(null);
   const phoneBufferRef = useRef<AudioBuffer | null>(null);
+  const footstepBufferRef = useRef<AudioBuffer | null>(null);
+  const greetingBufferRef = useRef<AudioBuffer | null>(null);
+  const sipBufferRef = useRef<AudioBuffer | null>(null);
+  const printPageBufferRef = useRef<AudioBuffer | null>(null);
+  const meetingTalkBufferRef = useRef<AudioBuffer | null>(null);
+  const paperHandleBufferRef = useRef<AudioBuffer | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const listenerPosRef = useRef({ x: 50, y: 50 });
   const masterVolumeRef = useRef(0.7);
   const isMutedRef = useRef(false);
+  const processedSoundEventsRef = useRef<Set<string>>(new Set());
 
-  const { audioSources, colleagues, listenerPosition, masterVolume, isMuted, isPlaying } = useOfficeStore();
+  const { audioSources, colleagues, listenerPosition, masterVolume, isMuted, isPlaying, colleagueSoundEvents, consumeColleagueSoundEvent } = useOfficeStore();
 
   useEffect(() => {
     listenerPosRef.current = listenerPosition;
@@ -332,6 +444,12 @@ export function useAudioEngine() {
       conversationBufferRef.current = createConversationSound(ctx);
       doorBufferRef.current = createDoorSound(ctx);
       phoneBufferRef.current = createPhoneSound(ctx);
+      footstepBufferRef.current = createFootstepSound(ctx);
+      greetingBufferRef.current = createGreetingSound(ctx);
+      sipBufferRef.current = createSipSound(ctx);
+      printPageBufferRef.current = createPrintPageSound(ctx);
+      meetingTalkBufferRef.current = createMeetingTalkSound(ctx);
+      paperHandleBufferRef.current = createPaperHandleSound(ctx);
     }
     
     if (audioContextRef.current.state === 'suspended') {
@@ -363,11 +481,81 @@ export function useAudioEngine() {
         return doorBufferRef.current;
       case 'phone':
         return phoneBufferRef.current;
+      case 'footstep':
+        return footstepBufferRef.current;
+      case 'greeting':
+        return greetingBufferRef.current;
+      case 'sip':
+        return sipBufferRef.current;
+      case 'print-page':
+        return printPageBufferRef.current;
+      case 'meeting-talk':
+        return meetingTalkBufferRef.current;
+      case 'paper-handle':
+        return paperHandleBufferRef.current;
       case 'ambient':
       default:
         return noiseBufferRef.current;
     }
   }, []);
+
+  const playColleagueSound = useCallback((position: Position, soundType: AudioSource['type']) => {
+    const ctx = audioContextRef.current;
+    if (!ctx || !masterGainRef.current) return;
+
+    const buffer = getBufferForType(soundType);
+    if (!buffer) return;
+
+    const soundSource = ctx.createBufferSource();
+    soundSource.buffer = buffer;
+
+    const gainNode = ctx.createGain();
+    const pannerNode = ctx.createStereoPanner();
+
+    const dx = position.x - listenerPosRef.current.x;
+    const dy = position.y - listenerPosRef.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxDistance = 100;
+    const minDistance = 5;
+    let distanceFactor = 1;
+    if (distance > minDistance) {
+      distanceFactor = Math.max(0, 1 - (distance - minDistance) / (maxDistance - minDistance));
+    }
+    const baseVolume = soundType === 'footstep' ? 0.12 : soundType === 'greeting' ? 0.25 : soundType === 'sip' ? 0.2 : soundType === 'print-page' ? 0.15 : soundType === 'meeting-talk' ? 0.2 : 0.18;
+    const vol = baseVolume * distanceFactor * masterVolumeRef.current * (isMutedRef.current ? 0 : 1);
+
+    const pan = Math.max(-1, Math.min(1, dx / 80));
+
+    gainNode.gain.setValueAtTime(vol, ctx.currentTime);
+    pannerNode.pan.setValueAtTime(pan, ctx.currentTime);
+
+    soundSource.connect(gainNode);
+    gainNode.connect(pannerNode);
+    pannerNode.connect(masterGainRef.current);
+
+    soundSource.start();
+    soundSource.onended = () => {
+      soundSource.disconnect();
+      gainNode.disconnect();
+      pannerNode.disconnect();
+    };
+  }, [getBufferForType]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    initAudioContext();
+
+    colleagueSoundEvents.forEach((event) => {
+      if (!processedSoundEventsRef.current.has(event.id)) {
+        processedSoundEventsRef.current.add(event.id);
+        playColleagueSound(event.position, event.soundType);
+        setTimeout(() => {
+          consumeColleagueSoundEvent(event.id);
+          processedSoundEventsRef.current.delete(event.id);
+        }, 2000);
+      }
+    });
+  }, [colleagueSoundEvents, isPlaying, initAudioContext, playColleagueSound, consumeColleagueSoundEvent]);
 
   const calculateCurrentVolume = useCallback((source: AudioSource): number => {
     if (source.muted || isMutedRef.current) return 0;

@@ -1,9 +1,17 @@
 import { create } from 'zustand';
-import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType } from '@/types/office';
+import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType } from '@/types/office';
 import { audioSources as initialAudioSources } from '@/data/audioSources';
 import { colleagues as initialColleagues } from '@/data/colleagues';
 import { viewPoints } from '@/data/viewPoints';
 import { getTimeOfDay } from '@/utils/timeUtils';
+
+export interface ColleagueSoundEvent {
+  id: string;
+  colleagueId: string;
+  soundType: AudioSourceType;
+  timestamp: number;
+  position: Position;
+}
 
 interface OfficeState {
   listenerPosition: Position;
@@ -18,6 +26,7 @@ interface OfficeState {
   currentView: string;
   showControlPanel: boolean;
   showViewSelector: boolean;
+  colleagueSoundEvents: ColleagueSoundEvent[];
 
   setListenerPosition: (position: Position) => void;
   setZoom: (zoom: number) => void;
@@ -28,6 +37,9 @@ interface OfficeState {
   toggleSourceMute: (id: string) => void;
   updateColleaguePosition: (id: string, position: Position) => void;
   updateColleagueState: (id: string, state: Colleague['state']) => void;
+  updateColleagueAction: (id: string, action: BehaviorActionType, duration: number) => void;
+  triggerColleagueSound: (colleagueId: string, soundType: AudioSourceType) => void;
+  consumeColleagueSoundEvent: (eventId: string) => void;
   updateTime: (delta: number) => void;
   setTimeSpeed: (speed: number) => void;
   toggleTimePause: () => void;
@@ -54,7 +66,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   isMuted: false,
   isPlaying: false,
   audioSources: [...initialAudioSources],
-  colleagues: initialColleagues.map(c => ({ ...c })),
+  colleagues: initialColleagues.map(c => ({ ...c, currentAction: 'none' as BehaviorActionType })),
   time: {
     hour: currentHour,
     minute: currentMinute,
@@ -75,6 +87,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     autoChangeInterval: 30,
   },
   isTimePaused: false,
+  colleagueSoundEvents: [],
 
   setListenerPosition: (position) => set({ listenerPosition: position }),
   setZoom: (zoom) => set({ zoom: Math.max(0.5, Math.min(2, zoom)) }),
@@ -111,6 +124,34 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
       colleagues: prev.colleagues.map((c) =>
         c.id === id ? { ...c, state } : c
       ),
+    })),
+
+  updateColleagueAction: (id, action, duration) =>
+    set((prev) => ({
+      colleagues: prev.colleagues.map((c) =>
+        c.id === id ? { ...c, currentAction: action, actionStartTime: Date.now(), actionDuration: duration } : c
+      ),
+    })),
+
+  triggerColleagueSound: (colleagueId, soundType) =>
+    set((state) => {
+      const colleague = state.colleagues.find(c => c.id === colleagueId);
+      if (!colleague) return state;
+      const event: ColleagueSoundEvent = {
+        id: `sound-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        colleagueId,
+        soundType,
+        timestamp: Date.now(),
+        position: { ...colleague.position },
+      };
+      return {
+        colleagueSoundEvents: [...state.colleagueSoundEvents, event].slice(-20),
+      };
+    }),
+
+  consumeColleagueSoundEvent: (eventId) =>
+    set((state) => ({
+      colleagueSoundEvents: state.colleagueSoundEvents.filter(e => e.id !== eventId),
     })),
   
   updateTime: (delta) =>

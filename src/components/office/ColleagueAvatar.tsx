@@ -8,12 +8,20 @@ interface ColleagueAvatarProps {
 
 export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
   const { time } = useOfficeStore();
-  const [walkOffset, setWalkOffset] = useState(0);
+  const [animOffset, setAnimOffset] = useState(0);
+  const [actionAnimOffset, setActionAnimOffset] = useState(0);
 
   useEffect(() => {
-    if (colleague.state === 'walking' && !time.isPaused) {
+    const needsAnim = colleague.state === 'walking' || 
+                     colleague.state === 'drinking-coffee' || 
+                     colleague.state === 'printing' || 
+                     colleague.state === 'greeting' ||
+                     colleague.state === 'in-meeting' ||
+                     colleague.state === 'talking';
+    if (needsAnim && !time.isPaused) {
       const interval = setInterval(() => {
-        setWalkOffset((prev) => prev + 0.3);
+        setAnimOffset((prev) => prev + 0.3);
+        setActionAnimOffset((prev) => prev + 0.15);
       }, 50);
       return () => clearInterval(interval);
     }
@@ -27,10 +35,20 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
   const isWorking = colleague.state === 'working';
   const isTalking = colleague.state === 'talking';
   const isResting = colleague.state === 'resting';
+  const isDrinkingCoffee = colleague.state === 'drinking-coffee';
+  const isPrinting = colleague.state === 'printing';
+  const isInMeeting = colleague.state === 'in-meeting';
+  const isGreeting = colleague.state === 'greeting';
 
-  const bounceOffset = isWalking ? Math.sin(walkOffset) * 2 : 0;
-  const legPhase = Math.sin(walkOffset * 2);
-  const bodyTilt = Math.sin(walkOffset * 1.5) * 3;
+  const bounceOffset = isWalking ? Math.sin(animOffset) * 2 : 0;
+  const legPhase = Math.sin(animOffset * 2);
+  const bodyTilt = isWalking ? Math.sin(animOffset * 1.5) * 3 : 0;
+  const armSwing = isWalking ? Math.sin(animOffset * 2) * 15 : 0;
+
+  const drinkSipPhase = Math.sin(actionAnimOffset * 3);
+  const printHeadPhase = Math.sin(actionAnimOffset * 5);
+  const greetWavePhase = Math.sin(actionAnimOffset * 6);
+  const meetingNodPhase = Math.sin(actionAnimOffset * 2);
 
   return (
     <div
@@ -59,20 +77,94 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
             backgroundColor: '#FFE4C4',
             border: '1px solid rgba(0,0,0,0.1)',
             boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-            transform: `translateZ(52px) rotate(${bodyTilt}deg)`,
+            transform: `translateZ(52px) rotate(${bodyTilt}deg) translateY(${isInMeeting ? meetingNodPhase * 1.5 : 0}px)`,
           }}
         >
           <div
             className="absolute top-1/3 left-1/4 w-0.5 h-0.5 bg-gray-700 rounded-full"
+            style={{ transform: isGreeting ? 'scaleX(1.5)' : 'none' }}
           />
           <div
             className="absolute top-1/3 right-1/4 w-0.5 h-0.5 bg-gray-700 rounded-full"
+            style={{ transform: isGreeting ? 'scaleX(1.5)' : 'none' }}
           />
           <div
             className={`absolute bottom-1/4 left-1/2 transform -translate-x-1/2 ${
-              isTalking ? 'w-1.5 h-1' : 'w-1 h-0.5'
+              isTalking || isGreeting || isInMeeting ? 'w-1.5 h-1' : 'w-1 h-0.5'
             } bg-gray-600 rounded-full`}
+            style={{
+              height: isDrinkingCoffee ? '0px' : (isTalking || isGreeting ? `${1 + Math.abs(greetWavePhase) * 1.5}px` : undefined),
+            }}
           />
+        </div>
+
+        <div
+          className="absolute top-0 left-1/2 transform -translate-x-1/2"
+          style={{
+            width: '4px',
+            height: '10px',
+            transform: `translateZ(55px) translateX(6px) rotateX(-20deg) rotateY(-30deg) rotate(${
+              isDrinkingCoffee ? -30 - drinkSipPhase * 25 : isGreeting ? -15 + greetWavePhase * 35 : isPrinting ? 10 + printHeadPhase * 8 : armSwing
+            }deg)`,
+            transformOrigin: 'top center',
+            transition: isWalking || isDrinkingCoffee || isGreeting || isPrinting ? 'none' : 'transform 0.2s',
+          }}
+        >
+          <div
+            className="w-full h-full rounded"
+            style={{ backgroundColor: '#FFE4C4', border: '1px solid rgba(0,0,0,0.08)' }}
+          />
+          {isDrinkingCoffee && (
+            <div
+              className="absolute -bottom-1 left-1/2 transform -translate-x-1/2"
+              style={{
+                width: '5px',
+                height: '6px',
+                backgroundColor: '#8B4513',
+                borderRadius: '0 0 2px 2px',
+                border: '1px solid rgba(0,0,0,0.1)',
+                transform: 'rotate(180deg)',
+              }}
+            >
+              <div
+                className="absolute top-0 left-0 w-full"
+                style={{
+                  height: '2px',
+                  backgroundColor: '#6F4E37',
+                  borderRadius: '50%',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        <div
+          className="absolute top-0 left-1/2 transform -translate-x-1/2"
+          style={{
+            width: '4px',
+            height: '10px',
+            transform: `translateZ(55px) translateX(-6px) rotateX(-20deg) rotateY(30deg) rotate(${
+              isPrinting ? -10 - printHeadPhase * 8 : -armSwing
+            }deg)`,
+            transformOrigin: 'top center',
+            transition: isWalking || isPrinting ? 'none' : 'transform 0.2s',
+          }}
+        >
+          <div
+            className="w-full h-full rounded"
+            style={{ backgroundColor: '#FFE4C4', border: '1px solid rgba(0,0,0,0.08)' }}
+          />
+          {isPrinting && (
+            <div
+              className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2"
+              style={{
+                width: '6px',
+                height: `${4 + Math.abs(printHeadPhase) * 3}px`,
+                backgroundColor: '#F5F5DC',
+                border: '1px solid rgba(0,0,0,0.1)',
+              }}
+            />
+          )}
         </div>
         
         <div
@@ -134,28 +226,28 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
           />
         )}
         
-        {isTalking && (
+        {(isTalking || isInMeeting) && (
           <div
             className="absolute -top-5 left-1/2 transform -translate-x-1/2"
             style={{ transform: 'translateZ(55px)' }}
           >
             <div className="flex gap-0.5">
               <div
-                className="w-1 h-1 bg-gray-400 rounded-full"
+                className="w-1 h-1 bg-blue-400 rounded-full"
                 style={{
                   animation: time.isPaused ? 'none' : 'bounce 0.6s infinite',
                   animationDelay: '0s',
                 }}
               />
               <div
-                className="w-1 h-1 bg-gray-400 rounded-full"
+                className="w-1 h-1 bg-blue-400 rounded-full"
                 style={{
                   animation: time.isPaused ? 'none' : 'bounce 0.6s infinite',
                   animationDelay: '0.1s',
                 }}
               />
               <div
-                className="w-1 h-1 bg-gray-400 rounded-full"
+                className="w-1 h-1 bg-blue-400 rounded-full"
                 style={{
                   animation: time.isPaused ? 'none' : 'bounce 0.6s infinite',
                   animationDelay: '0.2s',
@@ -164,13 +256,45 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
             </div>
           </div>
         )}
+
+        {isGreeting && (
+          <div
+            className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-green-600"
+            style={{ 
+              transform: `translateZ(60px) translateY(${Math.abs(greetWavePhase) * -2}px)`,
+              opacity: 0.8 + Math.abs(greetWavePhase) * 0.2,
+            }}
+          >
+            👋
+          </div>
+        )}
         
-        {isResting && (
+        {(isResting || isDrinkingCoffee) && (
+          <div
+            className="absolute -top-2 right-0 text-xs"
+            style={{ 
+              transform: `translateZ(55px) rotate(${isDrinkingCoffee ? drinkSipPhase * 10 : 0}deg)`,
+            }}
+          >
+            ☕
+          </div>
+        )}
+
+        {isPrinting && (
           <div
             className="absolute -top-2 right-0 text-xs"
             style={{ transform: 'translateZ(55px)' }}
           >
-            ☕
+            📄
+          </div>
+        )}
+
+        {isInMeeting && (
+          <div
+            className="absolute -top-2 right-0 text-xs"
+            style={{ transform: 'translateZ(55px)' }}
+          >
+            💼
           </div>
         )}
       </div>
@@ -189,10 +313,10 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         className="absolute left-1/2 rounded-full bg-black"
         style={{
           bottom: '-2px',
-          width: isWalking ? `${12 + Math.sin(walkOffset) * 2}px` : '14px',
-          height: isWalking ? `${5 + Math.sin(walkOffset * 2) * 1}px` : '6px',
+          width: isWalking ? `${12 + Math.sin(animOffset) * 2}px` : '14px',
+          height: isWalking ? `${5 + Math.sin(animOffset * 2) * 1}px` : '6px',
           transform: 'translateX(-50%) rotateX(90deg) translateZ(10px)',
-          opacity: isWalking ? 0.15 + Math.abs(Math.sin(walkOffset)) * 0.1 : 0.25,
+          opacity: isWalking ? 0.15 + Math.abs(Math.sin(animOffset)) * 0.1 : 0.25,
           filter: 'blur(2px)',
         }}
       />
