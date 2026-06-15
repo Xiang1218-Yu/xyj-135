@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useOfficeStore } from '@/store/useOfficeStore';
 import type { FurnitureColors, OfficeObject, DeskLayout, MeetingRoomLayout, KitchenLayout } from '@/types/office';
-import { Paintbrush, LayoutGrid, Sparkles, RotateCcw, Plus, Trash2, ChevronDown, ChevronRight, Move } from 'lucide-react';
+import { LayoutCanvas } from './LayoutCanvas';
+import { Paintbrush, LayoutGrid, Sparkles, RotateCcw, Plus, Move } from 'lucide-react';
 
 type DecorTab = 'colors' | 'layout' | 'objects';
 
@@ -54,134 +55,6 @@ function ColorPicker({ label, value, onChange }: { label: string; value: string;
   );
 }
 
-function DeskEditor({ desks, onChange }: { desks: DeskLayout[]; onChange: (index: number, desk: Partial<DeskLayout>) => void }) {
-  const [expanded, setExpanded] = useState<number | null>(null);
-
-  return (
-    <div className="space-y-1">
-      {desks.map((desk, i) => (
-        <div key={i} className="border border-gray-100 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setExpanded(expanded === i ? null : i)}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-          >
-            <span className="font-medium">{desk.label || `工位 ${i + 1}`}</span>
-            {expanded === i ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-          </button>
-          {expanded === i && (
-            <div className="px-3 pb-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-400">X (%)</label>
-                  <input
-                    type="range"
-                    min={5}
-                    max={95}
-                    value={desk.x}
-                    onChange={(e) => onChange(i, { x: Number(e.target.value) })}
-                    className="w-full h-1.5 accent-orange-400"
-                  />
-                  <span className="text-xs text-gray-500">{desk.x}</span>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Y (%)</label>
-                  <input
-                    type="range"
-                    min={10}
-                    max={90}
-                    value={desk.y}
-                    onChange={(e) => onChange(i, { y: Number(e.target.value) })}
-                    className="w-full h-1.5 accent-orange-400"
-                  />
-                  <span className="text-xs text-gray-500">{desk.y}</span>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-gray-400">标签</label>
-                <input
-                  type="text"
-                  value={desk.label}
-                  onChange={(e) => onChange(i, { label: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ObjectEditor({ obj, onUpdate, onRemove }: { obj: OfficeObject; onUpdate: (id: string, updates: Partial<OfficeObject>) => void; onRemove: (id: string) => void }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="border border-gray-100 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-      >
-        <span className="font-medium flex items-center gap-1.5">
-          <Move className="w-3 h-3 text-gray-400" />
-          {objectTypes.find((t) => t.value === obj.type)?.icon} {obj.type}-{obj.id.slice(-4)}
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(obj.id); }}
-            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-          {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        </div>
-      </button>
-      {expanded && (
-        <div className="px-3 pb-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs text-gray-400">X (%)</label>
-              <input
-                type="range"
-                min={5}
-                max={95}
-                value={obj.x}
-                onChange={(e) => onUpdate(obj.id, { x: Number(e.target.value) })}
-                className="w-full h-1.5 accent-orange-400"
-              />
-              <span className="text-xs text-gray-500">{obj.x}</span>
-            </div>
-            <div>
-              <label className="text-xs text-gray-400">Y (%)</label>
-              <input
-                type="range"
-                min={5}
-                max={95}
-                value={obj.y}
-                onChange={(e) => onUpdate(obj.id, { y: Number(e.target.value) })}
-                className="w-full h-1.5 accent-orange-400"
-              />
-              <span className="text-xs text-gray-500">{obj.y}</span>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-400">样式</label>
-            <select
-              value={obj.style || ''}
-              onChange={(e) => onUpdate(obj.id, { style: e.target.value })}
-              className="w-full px-2 py-1 text-xs border border-gray-200 rounded"
-            >
-              {(objectStyles[obj.type] || []).map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function DecorationCustomizer() {
   const {
     customization,
@@ -211,6 +84,9 @@ export function DecorationCustomizer() {
   const effectiveDesks = layoutOverrides.desks.length > 0 ? layoutOverrides.desks : theme.layout.desks;
   const effectiveMeetingRoom = layoutOverrides.meetingRoom || theme.layout.meetingRoom;
   const effectiveKitchen = layoutOverrides.kitchen || theme.layout.kitchen;
+  const effectivePrinter = layoutOverrides.printer || theme.layout.printer;
+  const effectiveAcUnit = layoutOverrides.acUnit || theme.layout.acUnit;
+  const effectiveDoor = layoutOverrides.door || theme.layout.door;
 
   const handleAddObject = () => {
     const styles = objectStyles[newObjectType] || [];
@@ -237,6 +113,9 @@ export function DecorationCustomizer() {
     if (!layoutOverrides.printer) {
       updateCustomLayoutItem('printer', { ...theme.layout.printer });
     }
+    if (!layoutOverrides.acUnit) {
+      updateCustomLayoutItem('acUnit', { ...theme.layout.acUnit });
+    }
     if (!layoutOverrides.door) {
       updateCustomLayoutItem('door', { ...theme.layout.door });
     }
@@ -247,6 +126,35 @@ export function DecorationCustomizer() {
     { id: 'layout', label: '布局', icon: LayoutGrid },
     { id: 'objects', label: '装饰', icon: Sparkles },
   ];
+
+  const onMoveDesk = (index: number, pos: { x: number; y: number }) => {
+    const arr = layoutOverrides.desks.length > 0 ? [...layoutOverrides.desks] : theme.layout.desks.map(d => ({ ...d }));
+    if (arr[index]) {
+      arr[index] = { ...arr[index], x: pos.x, y: pos.y };
+      updateCustomLayoutItem('desks', arr);
+    }
+  };
+
+  const onRenameDesk = (index: number, label: string) => {
+    const arr = layoutOverrides.desks.length > 0 ? [...layoutOverrides.desks] : theme.layout.desks.map(d => ({ ...d }));
+    if (arr[index]) {
+      arr[index] = { ...arr[index], label };
+      updateCustomLayoutItem('desks', arr);
+    }
+  };
+
+  const onMoveMeeting = (pos: { x: number; y: number }) =>
+    updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, x: pos.x, y: pos.y });
+  const onMoveKitchen = (pos: { x: number; y: number }) =>
+    updateCustomLayoutItem('kitchen', { ...effectiveKitchen, x: pos.x, y: pos.y });
+  const onMovePrinter = (pos: { x: number; y: number }) =>
+    updateCustomLayoutItem('printer', { x: pos.x, y: pos.y });
+  const onMoveAcUnit = (pos: { x: number; y: number }) =>
+    updateCustomLayoutItem('acUnit', { x: pos.x, y: pos.y });
+  const onMoveDoor = (pos: { x: number; y: number }) =>
+    updateCustomLayoutItem('door', { x: pos.x, y: pos.y });
+  const onMoveObject = (id: string, pos: { x: number; y: number }) =>
+    updateCustomObject(id, { x: pos.x, y: pos.y });
 
   return (
     <div className="space-y-4">
@@ -334,120 +242,55 @@ export function DecorationCustomizer() {
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  🪑 工位布局
-                  <span className="text-xs font-normal text-gray-400">拖动滑块调整位置</span>
+                  <Move className="w-4 h-4 text-orange-500" />
+                  办公室布局
                 </h4>
-                <DeskEditor
+                <p className="text-xs text-gray-400 mb-2">
+                  直接在画布上拖拽方块移动位置，双击工位可修改标签
+                </p>
+                <LayoutCanvas
                   desks={effectiveDesks}
-                  onChange={updateCustomDeskPosition}
+                  meetingRoom={effectiveMeetingRoom}
+                  kitchen={effectiveKitchen}
+                  printer={effectivePrinter}
+                  acUnit={effectiveAcUnit}
+                  door={effectiveDoor}
+                  customObjects={customObjects}
+                  onMoveDesk={onMoveDesk}
+                  onMoveMeeting={onMoveMeeting}
+                  onMoveKitchen={onMoveKitchen}
+                  onMovePrinter={onMovePrinter}
+                  onMoveAcUnit={onMoveAcUnit}
+                  onMoveDoor={onMoveDoor}
+                  onMoveObject={onMoveObject}
+                  onRenameDesk={onRenameDesk}
                 />
               </div>
 
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">🚪 会议室</h4>
-                <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-400">X</label>
-                      <input
-                        type="range"
-                        min={10}
-                        max={90}
-                        value={effectiveMeetingRoom.x}
-                        onChange={(e) => updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, x: Number(e.target.value) })}
-                        className="w-full h-1.5 accent-orange-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400">Y</label>
-                      <input
-                        type="range"
-                        min={10}
-                        max={90}
-                        value={effectiveMeetingRoom.y}
-                        onChange={(e) => updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, y: Number(e.target.value) })}
-                        className="w-full h-1.5 accent-orange-400"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-400">宽度</label>
-                      <input
-                        type="range"
-                        min={15}
-                        max={40}
-                        value={effectiveMeetingRoom.width}
-                        onChange={(e) => updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, width: Number(e.target.value) })}
-                        className="w-full h-1.5 accent-orange-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400">高度</label>
-                      <input
-                        type="range"
-                        min={10}
-                        max={30}
-                        value={effectiveMeetingRoom.height}
-                        onChange={(e) => updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, height: Number(e.target.value) })}
-                        className="w-full h-1.5 accent-orange-400"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400">风格</label>
-                    <select
-                      value={effectiveMeetingRoom.style}
-                      onChange={(e) => updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, style: e.target.value as MeetingRoomLayout['style'] })}
-                      className="w-full px-2 py-1 text-xs border border-gray-200 rounded"
-                    >
-                      <option value="rectangular">矩形</option>
-                      <option value="round">圆形</option>
-                      <option value="casual">休闲</option>
-                    </select>
-                  </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-600 mb-1.5">会议室风格</h4>
+                  <select
+                    value={effectiveMeetingRoom.style}
+                    onChange={(e) => updateCustomLayoutItem('meetingRoom', { ...effectiveMeetingRoom, style: e.target.value as MeetingRoomLayout['style'] })}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
+                  >
+                    <option value="rectangular">矩形</option>
+                    <option value="round">圆形</option>
+                    <option value="casual">休闲</option>
+                  </select>
                 </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">☕ 茶水间</h4>
-                <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-400">X</label>
-                      <input
-                        type="range"
-                        min={10}
-                        max={90}
-                        value={effectiveKitchen.x}
-                        onChange={(e) => updateCustomLayoutItem('kitchen', { ...effectiveKitchen, x: Number(e.target.value) })}
-                        className="w-full h-1.5 accent-orange-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400">Y</label>
-                      <input
-                        type="range"
-                        min={10}
-                        max={90}
-                        value={effectiveKitchen.y}
-                        onChange={(e) => updateCustomLayoutItem('kitchen', { ...effectiveKitchen, y: Number(e.target.value) })}
-                        className="w-full h-1.5 accent-orange-400"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400">风格</label>
-                    <select
-                      value={effectiveKitchen.style}
-                      onChange={(e) => updateCustomLayoutItem('kitchen', { ...effectiveKitchen, style: e.target.value as KitchenLayout['style'] })}
-                      className="w-full px-2 py-1 text-xs border border-gray-200 rounded"
-                    >
-                      <option value="modern">现代</option>
-                      <option value="cozy">温馨</option>
-                      <option value="industrial">工业</option>
-                    </select>
-                  </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-600 mb-1.5">茶水间风格</h4>
+                  <select
+                    value={effectiveKitchen.style}
+                    onChange={(e) => updateCustomLayoutItem('kitchen', { ...effectiveKitchen, style: e.target.value as KitchenLayout['style'] })}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
+                  >
+                    <option value="modern">现代</option>
+                    <option value="cozy">温馨</option>
+                    <option value="industrial">工业</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -474,22 +317,56 @@ export function DecorationCustomizer() {
                 </button>
               </div>
 
-              {customObjects.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">还没有自定义装饰品</p>
-                  <p className="text-xs">选择类型后点击"添加"来放置装饰品</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {customObjects.map((obj) => (
-                    <ObjectEditor
-                      key={obj.id}
-                      obj={obj}
-                      onUpdate={updateCustomObject}
-                      onRemove={removeCustomObject}
-                    />
-                  ))}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Move className="w-4 h-4 text-pink-500" />
+                  装饰品画布
+                </h4>
+                <p className="text-xs text-gray-400 mb-2">
+                  拖拽紫色方块移动装饰品位置，点击后右上角 ✕ 可删除
+                </p>
+                <LayoutCanvas
+                  desks={effectiveDesks}
+                  meetingRoom={effectiveMeetingRoom}
+                  kitchen={effectiveKitchen}
+                  printer={effectivePrinter}
+                  acUnit={effectiveAcUnit}
+                  door={effectiveDoor}
+                  customObjects={customObjects}
+                  onMoveDesk={onMoveDesk}
+                  onMoveMeeting={onMoveMeeting}
+                  onMoveKitchen={onMoveKitchen}
+                  onMovePrinter={onMovePrinter}
+                  onMoveAcUnit={onMoveAcUnit}
+                  onMoveDoor={onMoveDoor}
+                  onMoveObject={onMoveObject}
+                  onDeleteObject={removeCustomObject}
+                  onRenameDesk={onRenameDesk}
+                />
+              </div>
+
+              {customObjects.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-600 mb-1.5">装饰品样式</h4>
+                  <div className="space-y-1">
+                    {customObjects.map((obj) => (
+                      <div key={obj.id} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-100">
+                        <span className="text-xs font-medium text-gray-700 w-14 truncate">
+                          {objectTypes.find((t) => t.value === obj.type)?.icon || '✨'} {obj.type}
+                        </span>
+                        <select
+                          value={obj.style || ''}
+                          onChange={(e) => updateCustomObject(obj.id, { style: e.target.value })}
+                          className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded"
+                        >
+                          <option value="">默认样式</option>
+                          {(objectStyles[obj.type] || []).map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -509,7 +386,7 @@ export function DecorationCustomizer() {
         <div className="p-3 bg-violet-50 rounded-xl">
           <h4 className="font-medium text-violet-800 text-xs mb-1">🎨 自定义模式已开启</h4>
           <p className="text-xs text-violet-600">
-            您的所有自定义修改会叠加在当前主题之上。切换主题后自定义设置仍然保留。
+            在画布上直接拖拽方块即可调整位置。切换主题后自定义设置仍然保留。
           </p>
         </div>
       )}
