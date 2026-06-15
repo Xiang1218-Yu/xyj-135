@@ -91,6 +91,8 @@ export function OfficeScene() {
       onWheel={handleWheel}
       style={{ perspective: '1500px' }}
     >
+      <WeatherEffects />
+
       <div
         className="absolute left-1/2 top-1/2 w-[200%] h-[200%]"
         style={{
@@ -103,6 +105,7 @@ export function OfficeScene() {
             rotateZ(-45deg)
           `,
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          zIndex: 2,
         }}
       >
         <div
@@ -113,7 +116,6 @@ export function OfficeScene() {
           }}
         >
           <Lighting />
-          <WeatherEffects />
           <OfficeLayout />
           
           {colleagues.map((colleague) => (
@@ -135,7 +137,7 @@ export function OfficeScene() {
         </div>
       </div>
       
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 text-sm text-gray-600 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 text-sm text-gray-600 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg" style={{ zIndex: 5 }}>
         <span>🖱️ 拖动探索</span>
         <span className="text-gray-300">|</span>
         <span>🔍 滚轮缩放</span>

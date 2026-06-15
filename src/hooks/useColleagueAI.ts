@@ -264,7 +264,7 @@ export function useColleagueAI() {
             
             ctx.lastActionTime = now;
           } else {
-            if (ctx.walkTargetPos && colleague.state === 'walking') {
+            if (ctx.walkTargetPos) {
               targetState = 'walking';
               targetPos = ctx.walkTargetPos;
             } else {
