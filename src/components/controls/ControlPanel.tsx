@@ -6,9 +6,10 @@ import { TimeControls } from './TimeControls';
 import { WeatherControls } from './WeatherControls';
 import { ThemeControls } from './ThemeControls';
 import { DecorationCustomizer } from './DecorationCustomizer';
-import { Volume2, Map, Clock, X, Menu, Cloud, Palette, Sparkles } from 'lucide-react';
+import { ColleagueCustomizer } from './ColleagueCustomizer';
+import { Volume2, Map, Clock, X, Menu, Cloud, Palette, Sparkles, Users } from 'lucide-react';
 
-type Tab = 'audio' | 'view' | 'time' | 'weather' | 'theme' | 'decoration';
+type Tab = 'audio' | 'view' | 'time' | 'weather' | 'theme' | 'decoration' | 'colleague';
 
 const tabs = [
   { id: 'audio' as Tab, label: '声音', icon: Volume2 },
@@ -17,6 +18,7 @@ const tabs = [
   { id: 'weather' as Tab, label: '天气', icon: Cloud },
   { id: 'theme' as Tab, label: '主题', icon: Palette },
   { id: 'decoration' as Tab, label: '装饰', icon: Sparkles },
+  { id: 'colleague' as Tab, label: '同事', icon: Users },
 ];
 
 export function ControlPanel() {
@@ -81,6 +83,7 @@ export function ControlPanel() {
             {activeTab === 'weather' && <WeatherControls />}
             {activeTab === 'theme' && <ThemeControls />}
             {activeTab === 'decoration' && <DecorationCustomizer />}
+            {activeTab === 'colleague' && <ColleagueCustomizer />}
           </div>
           
           <div className="px-5 py-3 border-t border-gray-100 text-center text-xs text-gray-400">

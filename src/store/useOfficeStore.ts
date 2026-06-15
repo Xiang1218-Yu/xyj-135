@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType, OfficeThemeType, OfficeTheme, DecorationCustomization, CustomColorOverrides, CustomLayoutOverrides, FurnitureColors, DeskLayout, OfficeObject } from '@/types/office';
+import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType, OfficeThemeType, OfficeTheme, DecorationCustomization, CustomColorOverrides, CustomLayoutOverrides, FurnitureColors, DeskLayout, OfficeObject, ColleagueRole, ColleagueAppearance, HairStyle, HairColor, SkinTone } from '@/types/office';
 import { audioSources as initialAudioSources } from '@/data/audioSources';
 import { colleagues as initialColleagues } from '@/data/colleagues';
 import { viewPoints } from '@/data/viewPoints';
@@ -70,6 +70,12 @@ interface OfficeState {
   updateCustomObject: (id: string, updates: Partial<OfficeObject>) => void;
   resetCustomization: () => void;
   getCustomizedTheme: () => OfficeTheme;
+  addColleague: (colleague: Omit<Colleague, 'id' | 'position' | 'state' | 'currentAction'> & Partial<Pick<Colleague, 'id' | 'position' | 'state'>>) => void;
+  removeColleague: (id: string) => void;
+  updateColleague: (id: string, updates: Partial<Colleague>) => void;
+  updateColleagueAppearance: (id: string, appearance: Partial<ColleagueAppearance>) => void;
+  updateColleagueRole: (id: string, role: ColleagueRole) => void;
+  resetColleagues: () => void;
 }
 
 const currentHour = new Date().getHours();
@@ -416,4 +422,63 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
       layout: mergedLayout,
     };
   },
+
+  addColleague: (colleagueData) => {
+    const state = get();
+    const theme = state.getCustomizedTheme();
+    const deskIndex = state.colleagues.length;
+    const desk = theme.layout.desks[deskIndex] || theme.layout.desks[deskIndex % theme.layout.desks.length];
+    
+    const newColleague: Colleague = {
+      id: colleagueData.id || `colleague-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: colleagueData.name,
+      role: colleagueData.role,
+      color: colleagueData.color,
+      appearance: colleagueData.appearance,
+      position: colleagueData.position || { x: desk.x, y: desk.y },
+      state: colleagueData.state || 'working',
+      deskPosition: { x: desk.x, y: desk.y },
+      keyboardType: colleagueData.keyboardType,
+      typingSpeed: colleagueData.typingSpeed,
+      schedule: colleagueData.schedule,
+      speed: colleagueData.speed,
+      behaviorPreferences: colleagueData.behaviorPreferences,
+      currentAction: 'none',
+    };
+    
+    set((state) => ({
+      colleagues: [...state.colleagues, newColleague],
+    }));
+  },
+
+  removeColleague: (id) =>
+    set((state) => ({
+      colleagues: state.colleagues.filter((c) => c.id !== id),
+    })),
+
+  updateColleague: (id, updates) =>
+    set((state) => ({
+      colleagues: state.colleagues.map((c) =>
+        c.id === id ? { ...c, ...updates } : c
+      ),
+    })),
+
+  updateColleagueAppearance: (id, appearance) =>
+    set((state) => ({
+      colleagues: state.colleagues.map((c) =>
+        c.id === id ? { ...c, appearance: { ...c.appearance, ...appearance } } : c
+      ),
+    })),
+
+  updateColleagueRole: (id, role) =>
+    set((state) => ({
+      colleagues: state.colleagues.map((c) =>
+        c.id === id ? { ...c, role } : c
+      ),
+    })),
+
+  resetColleagues: () =>
+    set({
+      colleagues: initialColleagues.map((c) => ({ ...c, currentAction: 'none' as BehaviorActionType })),
+    }),
 }));

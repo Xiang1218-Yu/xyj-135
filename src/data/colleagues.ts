@@ -1,10 +1,80 @@
-import type { Colleague } from '@/types/office';
+import type { Colleague, ColleagueRole, HairStyle, HairColor, SkinTone } from '@/types/office';
+
+export const roleLabels: Record<ColleagueRole, string> = {
+  'engineer': '工程师',
+  'designer': '设计师',
+  'product-manager': '产品经理',
+  'marketing': '市场运营',
+  'sales': '销售',
+  'hr': '人力资源',
+  'finance': '财务',
+  'ceo': 'CEO',
+  'intern': '实习生',
+};
+
+export const hairStyleLabels: Record<HairStyle, string> = {
+  'short': '短发',
+  'medium': '中发',
+  'long': '长发',
+  'curly': '卷发',
+  'bald': '光头',
+  'ponytail': '马尾',
+  'bun': '丸子头',
+};
+
+export const hairColorLabels: Record<HairColor, string> = {
+  'black': '黑色',
+  'brown': '棕色',
+  'blonde': '金色',
+  'red': '红色',
+  'gray': '灰色',
+  'white': '白色',
+  'blue': '蓝色',
+  'pink': '粉色',
+  'purple': '紫色',
+};
+
+export const hairColorValues: Record<HairColor, string> = {
+  'black': '#2C1810',
+  'brown': '#6B4423',
+  'blonde': '#D4A853',
+  'red': '#A0522D',
+  'gray': '#808080',
+  'white': '#F5F5F5',
+  'blue': '#4A90D9',
+  'pink': '#FFB6C1',
+  'purple': '#9370DB',
+};
+
+export const skinToneLabels: Record<SkinTone, string> = {
+  'light': '浅色',
+  'medium': '中等',
+  'tan': '小麦色',
+  'dark': '深色',
+  'deep': '深褐色',
+};
+
+export const skinToneValues: Record<SkinTone, string> = {
+  'light': '#FFE4C4',
+  'medium': '#E8B89A',
+  'tan': '#D2A078',
+  'dark': '#A67B5B',
+  'deep': '#6B4423',
+};
 
 export const colleagues: Colleague[] = [
   {
     id: 'colleague-1',
     name: '小明',
+    role: 'engineer',
     color: '#E8A87C',
+    appearance: {
+      hairStyle: 'short',
+      hairColor: 'black',
+      skinTone: 'light',
+      shirtColor: '#E8A87C',
+      pantsColor: '#4A5568',
+    },
     position: { x: 25, y: 35 },
     state: 'working',
     deskPosition: { x: 25, y: 35 },
@@ -29,7 +99,15 @@ export const colleagues: Colleague[] = [
   {
     id: 'colleague-2',
     name: '小红',
+    role: 'designer',
     color: '#C38D9E',
+    appearance: {
+      hairStyle: 'long',
+      hairColor: 'brown',
+      skinTone: 'light',
+      shirtColor: '#C38D9E',
+      pantsColor: '#553C3C',
+    },
     position: { x: 45, y: 35 },
     state: 'working',
     deskPosition: { x: 45, y: 35 },
@@ -54,7 +132,15 @@ export const colleagues: Colleague[] = [
   {
     id: 'colleague-3',
     name: '小刚',
+    role: 'product-manager',
     color: '#7BA05B',
+    appearance: {
+      hairStyle: 'short',
+      hairColor: 'black',
+      skinTone: 'medium',
+      shirtColor: '#7BA05B',
+      pantsColor: '#2D3748',
+    },
     position: { x: 65, y: 35 },
     state: 'working',
     deskPosition: { x: 65, y: 35 },
@@ -79,7 +165,15 @@ export const colleagues: Colleague[] = [
   {
     id: 'colleague-4',
     name: '小丽',
+    role: 'marketing',
     color: '#85DCB8',
+    appearance: {
+      hairStyle: 'ponytail',
+      hairColor: 'black',
+      skinTone: 'light',
+      shirtColor: '#85DCB8',
+      pantsColor: '#2C5282',
+    },
     position: { x: 35, y: 55 },
     state: 'working',
     deskPosition: { x: 35, y: 55 },
@@ -104,7 +198,15 @@ export const colleagues: Colleague[] = [
   {
     id: 'colleague-5',
     name: '小华',
+    role: 'sales',
     color: '#F7DC6F',
+    appearance: {
+      hairStyle: 'curly',
+      hairColor: 'brown',
+      skinTone: 'tan',
+      shirtColor: '#F7DC6F',
+      pantsColor: '#744210',
+    },
     position: { x: 55, y: 55 },
     state: 'working',
     deskPosition: { x: 55, y: 55 },
@@ -129,7 +231,15 @@ export const colleagues: Colleague[] = [
   {
     id: 'colleague-6',
     name: '阿强',
+    role: 'hr',
     color: '#BB8FCE',
+    appearance: {
+      hairStyle: 'bun',
+      hairColor: 'black',
+      skinTone: 'light',
+      shirtColor: '#BB8FCE',
+      pantsColor: '#44337A',
+    },
     position: { x: 75, y: 55 },
     state: 'working',
     deskPosition: { x: 75, y: 55 },

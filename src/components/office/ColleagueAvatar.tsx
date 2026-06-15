@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Colleague } from '@/types/office';
 import { useOfficeStore } from '@/store/useOfficeStore';
+import { skinToneValues, hairColorValues, roleLabels } from '@/data/colleagues';
 
 interface ColleagueAvatarProps {
   colleague: Colleague;
@@ -50,6 +51,195 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
   const greetWavePhase = Math.sin(actionAnimOffset * 6);
   const meetingNodPhase = Math.sin(actionAnimOffset * 2);
 
+  const skinColor = skinToneValues[colleague.appearance.skinTone];
+  const hairColor = hairColorValues[colleague.appearance.hairColor];
+  const shirtColor = colleague.appearance.shirtColor;
+  const pantsColor = colleague.appearance.pantsColor;
+  const { hairStyle } = colleague.appearance;
+
+  const renderHair = () => {
+    const baseStyle: React.CSSProperties = {
+      position: 'absolute',
+      left: '50%',
+      top: 0,
+      transform: 'translateX(-50%)',
+      backgroundColor: hairColor,
+    };
+
+    switch (hairStyle) {
+      case 'short':
+        return (
+          <div
+            style={{
+              ...baseStyle,
+              width: '13px',
+              height: '6px',
+              borderRadius: '50% 50% 30% 30%',
+              transform: 'translateX(-50%) translateY(-1px)',
+              zIndex: 1,
+            }}
+          />
+        );
+      case 'medium':
+        return (
+          <>
+            <div
+              style={{
+                ...baseStyle,
+                width: '14px',
+                height: '8px',
+                borderRadius: '50% 50% 20% 20%',
+                transform: 'translateX(-50%) translateY(-2px)',
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: '-1px',
+                top: '4px',
+                width: '3px',
+                height: '6px',
+                backgroundColor: hairColor,
+                borderRadius: '0 0 2px 2px',
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                right: '-1px',
+                top: '4px',
+                width: '3px',
+                height: '6px',
+                backgroundColor: hairColor,
+                borderRadius: '0 0 2px 2px',
+                zIndex: 1,
+              }}
+            />
+          </>
+        );
+      case 'long':
+        return (
+          <>
+            <div
+              style={{
+                ...baseStyle,
+                width: '14px',
+                height: '9px',
+                borderRadius: '50% 50% 10% 10%',
+                transform: 'translateX(-50%) translateY(-3px)',
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: '-2px',
+                top: '5px',
+                width: '4px',
+                height: '14px',
+                backgroundColor: hairColor,
+                borderRadius: '0 0 3px 3px',
+                zIndex: 0,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                right: '-2px',
+                top: '5px',
+                width: '4px',
+                height: '14px',
+                backgroundColor: hairColor,
+                borderRadius: '0 0 3px 3px',
+                zIndex: 0,
+              }}
+            />
+          </>
+        );
+      case 'curly':
+        return (
+          <div
+            style={{
+              ...baseStyle,
+              width: '15px',
+              height: '10px',
+              borderRadius: '50% 50% 40% 40%',
+              transform: 'translateX(-50%) translateY(-4px)',
+              background: `radial-gradient(circle at 20% 30%, ${hairColor} 2px, transparent 2px),
+                           radial-gradient(circle at 50% 20%, ${hairColor} 2.5px, transparent 2.5px),
+                           radial-gradient(circle at 80% 30%, ${hairColor} 2px, transparent 2px),
+                           radial-gradient(circle at 30% 60%, ${hairColor} 2px, transparent 2px),
+                           radial-gradient(circle at 70% 60%, ${hairColor} 2px, transparent 2px),
+                           ${hairColor}`,
+              zIndex: 1,
+            }}
+          />
+        );
+      case 'bald':
+        return null;
+      case 'ponytail':
+        return (
+          <>
+            <div
+              style={{
+                ...baseStyle,
+                width: '13px',
+                height: '6px',
+                borderRadius: '50% 50% 30% 30%',
+                transform: 'translateX(-50%) translateY(-1px)',
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '5px',
+                width: '4px',
+                height: '10px',
+                backgroundColor: hairColor,
+                borderRadius: '2px',
+                transform: 'translateX(-50%)',
+                zIndex: 0,
+              }}
+            />
+          </>
+        );
+      case 'bun':
+        return (
+          <>
+            <div
+              style={{
+                ...baseStyle,
+                width: '12px',
+                height: '5px',
+                borderRadius: '50% 50% 30% 30%',
+                transform: 'translateX(-50%) translateY(-1px)',
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '-4px',
+                width: '7px',
+                height: '7px',
+                backgroundColor: hairColor,
+                borderRadius: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 2,
+              }}
+            />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div
       className="absolute transform -translate-x-1/2 -translate-y-1/2"
@@ -74,12 +264,13 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
           style={{
             width: '12px',
             height: '12px',
-            backgroundColor: '#FFE4C4',
+            backgroundColor: skinColor,
             border: '1px solid rgba(0,0,0,0.1)',
             boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
             transform: `translateZ(52px) rotate(${bodyTilt}deg) translateY(${isInMeeting ? meetingNodPhase * 1.5 : 0}px)`,
           }}
         >
+          {renderHair()}
           <div
             className="absolute top-1/3 left-1/4 w-0.5 h-0.5 bg-gray-700 rounded-full"
             style={{ transform: isGreeting ? 'scaleX(1.5)' : 'none' }}
@@ -112,7 +303,7 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         >
           <div
             className="w-full h-full rounded"
-            style={{ backgroundColor: '#FFE4C4', border: '1px solid rgba(0,0,0,0.08)' }}
+            style={{ backgroundColor: skinColor, border: '1px solid rgba(0,0,0,0.08)' }}
           />
           {isDrinkingCoffee && (
             <div
@@ -152,7 +343,7 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         >
           <div
             className="w-full h-full rounded"
-            style={{ backgroundColor: '#FFE4C4', border: '1px solid rgba(0,0,0,0.08)' }}
+            style={{ backgroundColor: skinColor, border: '1px solid rgba(0,0,0,0.08)' }}
           />
           {isPrinting && (
             <div
@@ -172,7 +363,7 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
           style={{
             width: '14px',
             height: '16px',
-            backgroundColor: colleague.color,
+            backgroundColor: shirtColor,
             boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
             transform: `translateZ(51px) rotate(${bodyTilt}deg)`,
           }}
@@ -184,7 +375,7 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
             bottom: '-6px',
             width: '10px',
             height: '8px',
-            backgroundColor: colleague.color,
+            backgroundColor: pantsColor,
             filter: 'brightness(0.85)',
             transform: `translateX(-50%) rotateX(90deg) translateZ(50px)`,
             transformOrigin: 'top center',
@@ -199,16 +390,18 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
           }}
         >
           <div
-            className="absolute left-0 w-1.5 h-full bg-gray-700 rounded-b"
+            className="absolute left-0 w-1.5 h-full rounded-b"
             style={{
+              backgroundColor: pantsColor,
               transform: `translateZ(50px) rotate(${isWalking ? legPhase * 25 : 0}deg)`,
               transformOrigin: 'top',
               transition: isWalking ? 'none' : 'transform 0.2s',
             }}
           />
           <div
-            className="absolute right-0 w-1.5 h-full bg-gray-700 rounded-b"
+            className="absolute right-0 w-1.5 h-full rounded-b"
             style={{
+              backgroundColor: pantsColor,
               transform: `translateZ(50px) rotate(${isWalking ? -legPhase * 25 : 0}deg)`,
               transformOrigin: 'top',
               transition: isWalking ? 'none' : 'transform 0.2s',
@@ -300,13 +493,18 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
       </div>
       
       <div
-        className="absolute left-1/2 text-xs text-gray-600 whitespace-nowrap font-medium"
+        className="absolute left-1/2 whitespace-nowrap"
         style={{
-          bottom: '-18px',
+          bottom: '-24px',
           transform: 'translateX(-50%) rotateZ(45deg) rotateX(-60deg) translateZ(50px)',
         }}
       >
-        {colleague.name}
+        <div className="text-xs text-gray-700 font-medium text-center">
+          {colleague.name}
+        </div>
+        <div className="text-[9px] text-gray-400 text-center mt-0.5">
+          {roleLabels[colleague.role]}
+        </div>
       </div>
       
       <div

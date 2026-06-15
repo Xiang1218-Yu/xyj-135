@@ -49,6 +49,52 @@ export type ColleagueState =
   | 'greeting'
   | 'getting-coffee';
 
+export type ColleagueRole =
+  | 'engineer'
+  | 'designer'
+  | 'product-manager'
+  | 'marketing'
+  | 'sales'
+  | 'hr'
+  | 'finance'
+  | 'ceo'
+  | 'intern';
+
+export type HairStyle =
+  | 'short'
+  | 'medium'
+  | 'long'
+  | 'curly'
+  | 'bald'
+  | 'ponytail'
+  | 'bun';
+
+export type HairColor =
+  | 'black'
+  | 'brown'
+  | 'blonde'
+  | 'red'
+  | 'gray'
+  | 'white'
+  | 'blue'
+  | 'pink'
+  | 'purple';
+
+export type SkinTone =
+  | 'light'
+  | 'medium'
+  | 'tan'
+  | 'dark'
+  | 'deep';
+
+export interface ColleagueAppearance {
+  hairStyle: HairStyle;
+  hairColor: HairColor;
+  skinTone: SkinTone;
+  shirtColor: string;
+  pantsColor: string;
+}
+
 export interface BehaviorPreferences {
   coffeeFrequency: number;
   printFrequency: number;
@@ -75,7 +121,9 @@ export type BehaviorActionType =
 export interface Colleague {
   id: string;
   name: string;
+  role: ColleagueRole;
   color: string;
+  appearance: ColleagueAppearance;
   position: Position;
   state: ColleagueState;
   targetPosition?: Position;
