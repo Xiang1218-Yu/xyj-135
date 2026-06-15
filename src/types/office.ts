@@ -146,3 +146,130 @@ export interface LightingConfig {
   windowLightIntensity: number;
   ceilingLightIntensity: number;
 }
+
+export type OfficeThemeType = 
+  | 'modern' 
+  | 'industrial' 
+  | 'scandinavian' 
+  | 'japanese' 
+  | 'creative'
+  | 'classic';
+
+export type FloorPattern = 
+  | 'wood-plank' 
+  | 'concrete' 
+  | 'tile' 
+  | 'tatami' 
+  | 'carpet'
+  | 'herringbone';
+
+export type FurnitureStyle = 
+  | 'modern' 
+  | 'industrial' 
+  | 'minimalist' 
+  | 'traditional' 
+  | 'colorful';
+
+export interface ThemeColors {
+  morning: string;
+  noon: string;
+  afternoon: string;
+  evening: string;
+  night: string;
+}
+
+export interface FurnitureColors {
+  deskTop: string;
+  deskSide: string;
+  chair: string;
+  chairSeat: string;
+  monitor: string;
+  monitorScreen: string;
+  table: string;
+  cabinet: string;
+}
+
+export interface FloorConfig {
+  pattern: FloorPattern;
+  colors: ThemeColors;
+  secondaryColor?: string;
+  lineColor?: string;
+}
+
+export interface WallConfig {
+  colors: ThemeColors;
+  accentColor?: string;
+  hasWallDecoration?: boolean;
+}
+
+export interface WindowConfig {
+  style: 'modern' | 'classic' | 'japanese' | 'large';
+  frameColor: string;
+  glassColor: string;
+}
+
+export interface DeskLayout {
+  x: number;
+  y: number;
+  label: string;
+  rotation?: number;
+}
+
+export interface MeetingRoomLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  style: 'round' | 'rectangular' | 'casual';
+}
+
+export interface KitchenLayout {
+  x: number;
+  y: number;
+  style: 'modern' | 'cozy' | 'industrial';
+}
+
+export interface PlantLayout {
+  x: number;
+  y: number;
+  type: 'small' | 'medium' | 'large';
+}
+
+export interface OfficeObject {
+  id: string;
+  type: 'plant' | 'bookshelf' | 'painting' | 'rug' | 'lamp' | 'decoration';
+  x: number;
+  y: number;
+  style?: string;
+}
+
+export interface OfficeLayoutConfig {
+  desks: DeskLayout[];
+  meetingRoom: MeetingRoomLayout;
+  kitchen: KitchenLayout;
+  printer: Position;
+  acUnit: Position;
+  door: Position;
+  plants: PlantLayout[];
+  extraObjects: OfficeObject[];
+}
+
+export interface OfficeTheme {
+  id: OfficeThemeType;
+  name: string;
+  description: string;
+  icon: string;
+  floor: FloorConfig;
+  walls: WallConfig;
+  window: WindowConfig;
+  furniture: FurnitureColors;
+  furnitureStyle: FurnitureStyle;
+  layout: OfficeLayoutConfig;
+  ambientIntensity: number;
+  ceilingLightStyle: 'recessed' | 'pendant' | 'track' | 'chandelier';
+}
+
+export interface ThemeState {
+  currentTheme: OfficeThemeType;
+  availableThemes: OfficeThemeType[];
+}

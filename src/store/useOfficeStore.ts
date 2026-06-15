@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType } from '@/types/office';
+import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType, OfficeThemeType, OfficeTheme } from '@/types/office';
 import { audioSources as initialAudioSources } from '@/data/audioSources';
 import { colleagues as initialColleagues } from '@/data/colleagues';
 import { viewPoints } from '@/data/viewPoints';
 import { getTimeOfDay } from '@/utils/timeUtils';
+import { getOfficeTheme, getAllThemes } from '@/data/officeThemes';
 
 export interface ColleagueSoundEvent {
   id: string;
@@ -54,6 +55,10 @@ interface OfficeState {
   setWeatherAutoInterval: (interval: number) => void;
   setWeatherIntensity: (intensity: number) => void;
   isTimePaused: boolean;
+  currentTheme: OfficeThemeType;
+  setOfficeTheme: (theme: OfficeThemeType) => void;
+  getCurrentTheme: () => OfficeTheme;
+  getAllThemes: () => OfficeTheme[];
 }
 
 const currentHour = new Date().getHours();
@@ -88,6 +93,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   },
   isTimePaused: false,
   colleagueSoundEvents: [],
+  currentTheme: 'modern' as OfficeThemeType,
 
   setListenerPosition: (position) => set({ listenerPosition: position }),
   setZoom: (zoom) => set({ zoom: Math.max(0.5, Math.min(2, zoom)) }),
@@ -251,4 +257,25 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     set((state) => ({
       weather: { ...state.weather, intensity: Math.max(0, Math.min(1, intensity)) },
     })),
+
+  setOfficeTheme: (theme: OfficeThemeType) => {
+    const newTheme = getOfficeTheme(theme);
+    const colleagues = get().colleagues;
+    const updatedColleagues = colleagues.map((c, index) => {
+      const desk = newTheme.layout.desks[index];
+      if (desk) {
+        return {
+          ...c,
+          deskPosition: { x: desk.x, y: desk.y },
+          position: c.state === 'working' ? { x: desk.x, y: desk.y } : c.position,
+        };
+      }
+      return c;
+    });
+    set({ currentTheme: theme, colleagues: updatedColleagues });
+  },
+
+  getCurrentTheme: () => getOfficeTheme(get().currentTheme),
+
+  getAllThemes: () => getAllThemes(),
 }));
