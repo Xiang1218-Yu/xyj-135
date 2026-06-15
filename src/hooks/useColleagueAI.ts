@@ -37,13 +37,27 @@ function getActivityLevel(hour: number): number {
 
 interface ColleagueContext {
   id: string;
-  walkStartPos?: Position;
   walkTargetPos?: Position;
-  walkStartTime?: number;
-  walkDuration?: number;
   lastState: ColleagueState;
   lastActionTime: number;
-  initialized: boolean;
+  lastCheckedHour: number;
+  lastCheckedMinute: number;
+  lastProcessedHour: number;
+}
+
+function getExpectedStateForTime(colleague: any, currentHour: number): { state: ColleagueState; pos: Position } {
+  if (currentHour < colleague.schedule.arriveTime) {
+    return { state: 'away', pos: entranceTarget };
+  } else if (
+    currentHour >= colleague.schedule.lunchStart &&
+    currentHour < colleague.schedule.lunchEnd
+  ) {
+    return { state: 'resting', pos: kitchenTarget };
+  } else if (currentHour >= colleague.schedule.leaveTime) {
+    return { state: 'away', pos: entranceTarget };
+  } else {
+    return { state: 'working', pos: colleague.deskPosition };
+  }
 }
 
 export function useColleagueAI() {
@@ -51,182 +65,211 @@ export function useColleagueAI() {
   const animationFrameRef = useRef<number>();
   const lastUpdateRef = useRef<number>(Date.now());
   const colleagueContexts = useRef<Map<string, ColleagueContext>>(new Map());
-  const firstRunRef = useRef(true);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (firstRunRef.current) {
-      firstRunRef.current = false;
-      const now = Date.now();
-      const currentHour = time.hour + time.minute / 60;
+    const now = Date.now();
+    const currentHour = time.hour + time.minute / 60;
+    
+    colleagues.forEach((c) => {
+      const expected = getExpectedStateForTime(c, currentHour);
+      const ctx: ColleagueContext = {
+        id: c.id,
+        lastState: expected.state,
+        lastActionTime: now,
+        lastCheckedHour: time.hour,
+        lastCheckedMinute: time.minute,
+        lastProcessedHour: time.hour,
+      };
       
-      colleagues.forEach((c) => {
-        let initialState: ColleagueState = c.state;
-        let initialPos = { ...c.position };
-        
-        if (currentHour < c.schedule.arriveTime) {
-          initialState = 'away';
-          initialPos = { ...entranceTarget };
-        } else if (
-          currentHour >= c.schedule.lunchStart &&
-          currentHour < c.schedule.lunchEnd
-        ) {
-          initialState = 'resting';
-          initialPos = { ...kitchenTarget };
-        } else if (currentHour >= c.schedule.leaveTime) {
-          initialState = 'away';
-          initialPos = { ...entranceTarget };
-        } else {
-          initialState = 'working';
-          initialPos = { ...c.deskPosition };
-        }
-        
-        if (c.state !== initialState) {
-          updateColleagueState(c.id, initialState);
-        }
-        if (getDistance(c.position, initialPos) > 1) {
-          updateColleaguePosition(c.id, initialPos);
-        }
-        
-        colleagueContexts.current.set(c.id, {
-          id: c.id,
-          lastState: initialState,
-          lastActionTime: now,
-          initialized: true,
-        });
-      });
-    } else {
-      const now = Date.now();
-      colleagues.forEach((c) => {
-        if (!colleagueContexts.current.has(c.id)) {
-          colleagueContexts.current.set(c.id, {
-            id: c.id,
-            lastState: c.state,
-            lastActionTime: now,
-            initialized: true,
-          });
-        }
-      });
-    }
+      if (c.state !== expected.state) {
+        updateColleagueState(c.id, expected.state);
+      }
+      if (getDistance(c.position, expected.pos) > 1) {
+        updateColleaguePosition(c.id, expected.pos);
+      }
+      
+      colleagueContexts.current.set(c.id, ctx);
+    });
+    
+    initializedRef.current = true;
   }, []);
 
   useEffect(() => {
+    if (!initializedRef.current) return;
+    
+    const currentHour = time.hour + time.minute / 60;
+    const now = Date.now();
+    
+    colleagues.forEach((c) => {
+      const ctx = colleagueContexts.current.get(c.id);
+      if (!ctx) return;
+      
+      const expected = getExpectedStateForTime(c, currentHour);
+      const expectedHour = time.hour;
+      const expectedMinute = time.minute;
+      
+      const timeJumped = Math.abs(expectedHour - ctx.lastCheckedHour) > 1 ||
+                        (expectedHour === ctx.lastCheckedHour && Math.abs(expectedMinute - ctx.lastCheckedMinute) > 30);
+      
+      if (timeJumped || ctx.lastCheckedHour !== expectedHour) {
+        ctx.lastCheckedHour = expectedHour;
+        ctx.lastCheckedMinute = expectedMinute;
+        ctx.lastActionTime = now;
+        ctx.walkTargetPos = undefined;
+        
+        if (expected.state !== c.state && c.state !== 'walking') {
+          updateColleaguePosition(c.id, { ...expected.pos });
+          updateColleagueState(c.id, expected.state);
+          ctx.lastState = expected.state;
+        }
+      } else if (ctx.lastProcessedHour !== expectedHour) {
+        ctx.lastProcessedHour = expectedHour;
+        ctx.lastActionTime = now;
+        ctx.walkTargetPos = undefined;
+        
+        if (expected.state === 'away' && c.state !== 'away') {
+          updateColleagueState(c.id, 'walking');
+          ctx.lastState = 'walking';
+          ctx.walkTargetPos = expected.pos;
+        } else if (expected.state === 'resting' && (c.state === 'working' || c.state === 'talking')) {
+          updateColleagueState(c.id, 'walking');
+          ctx.lastState = 'walking';
+          ctx.walkTargetPos = expected.pos;
+        } else if (expected.state === 'working' && (c.state === 'away' || c.state === 'resting')) {
+          updateColleagueState(c.id, 'walking');
+          ctx.lastState = 'walking';
+          ctx.walkTargetPos = expected.pos;
+        }
+      }
+      
+      ctx.lastCheckedHour = expectedHour;
+      ctx.lastCheckedMinute = expectedMinute;
+    });
+  }, [time.hour, time.minute, colleagues, updateColleagueState, updateColleaguePosition]);
+
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    
     const tick = () => {
       const now = Date.now();
       const deltaMs = now - lastUpdateRef.current;
       lastUpdateRef.current = now;
       
-      const deltaSeconds = deltaMs / 1000;
+      const deltaSeconds = Math.min(deltaMs / 1000, 0.1);
 
       if (time.isPaused) {
         animationFrameRef.current = requestAnimationFrame(tick);
         return;
       }
 
-      colleagues.forEach((colleague) => {
-        const currentHour = time.hour + time.minute / 60;
-        const activityLevel = getActivityLevel(time.hour);
-        let targetState: ColleagueState = colleague.state;
-        let targetPos: Position | null = null;
+      const currentHour = time.hour + time.minute / 60;
+      const activityLevel = getActivityLevel(time.hour);
 
+      colleagues.forEach((colleague) => {
         const ctx = colleagueContexts.current.get(colleague.id);
         if (!ctx) return;
 
-        if (currentHour < colleague.schedule.arriveTime) {
-          targetState = 'away';
-          targetPos = entranceTarget;
-        } else if (
-          currentHour >= colleague.schedule.lunchStart &&
-          currentHour < colleague.schedule.lunchEnd
-        ) {
-          if (colleague.state === 'working' || colleague.state === 'talking' || colleague.state === 'walking') {
-            if (Math.random() < 0.7) {
+        let targetState: ColleagueState = colleague.state;
+        let targetPos: Position = colleague.deskPosition;
+        
+        const expected = getExpectedStateForTime(colleague, currentHour);
+        
+        if (colleague.state === 'away') {
+          if (expected.state !== 'away') {
+            targetState = 'walking';
+            targetPos = colleague.deskPosition;
+          } else {
+            targetState = 'away';
+            targetPos = entranceTarget;
+          }
+        } else if (colleague.state === 'resting') {
+          if (expected.state === 'working') {
+            targetState = 'walking';
+            targetPos = colleague.deskPosition;
+          } else {
+            targetState = 'resting';
+            targetPos = kitchenTarget;
+          }
+        } else if (colleague.state === 'walking') {
+          targetState = 'walking';
+          targetPos = ctx.walkTargetPos || colleague.deskPosition;
+          
+          if (getDistance(colleague.position, targetPos) < 1.5) {
+            ctx.walkTargetPos = undefined;
+            
+            if (expected.state === 'away' && getDistance(targetPos, entranceTarget) < 3) {
+              targetState = 'away';
+              targetPos = entranceTarget;
+            } else if (expected.state === 'resting' && getDistance(targetPos, kitchenTarget) < 3) {
               targetState = 'resting';
               targetPos = kitchenTarget;
             } else {
-              targetState = 'away';
-              targetPos = entranceTarget;
+              targetState = 'working';
+              targetPos = colleague.deskPosition;
             }
-          } else {
-            targetState = colleague.state;
-            targetPos = colleague.state === 'resting' ? kitchenTarget : entranceTarget;
-          }
-        } else if (currentHour >= colleague.schedule.leaveTime) {
-          if (colleague.state !== 'away') {
-            targetState = 'walking';
-            targetPos = entranceTarget;
-            if (getDistance(colleague.position, entranceTarget) < 2) {
-              targetState = 'away';
-            }
+            ctx.lastActionTime = now;
           }
         } else {
-          if (colleague.state === 'away') {
-            targetState = 'walking';
-            targetPos = colleague.deskPosition;
-            if (getDistance(colleague.position, colleague.deskPosition) < 2) {
-              targetState = 'working';
-            }
-          } else if (colleague.state === 'resting') {
-            targetState = 'walking';
-            targetPos = colleague.deskPosition;
-            if (getDistance(colleague.position, colleague.deskPosition) < 2) {
-              targetState = 'working';
-            }
-          } else {
-            const timeSinceLastAction = now - ctx.lastActionTime;
-            const actionInterval = 3000 + Math.random() * (7000 / activityLevel);
-            
-            if (timeSinceLastAction > actionInterval && activityLevel > 0.2) {
-              const actionRoll = Math.random();
-              const walkProb = 0.15 * activityLevel;
-              const talkProb = 0.1 * activityLevel;
-              const restProb = 0.05 * activityLevel;
+          const timeSinceLastAction = now - ctx.lastActionTime;
+          const actionInterval = 4000 + Math.random() * (6000 / Math.max(0.3, activityLevel));
+          
+          if (timeSinceLastAction > actionInterval && activityLevel > 0.2 && expected.state === 'working') {
+            const actionRoll = Math.random();
+            const walkProb = 0.12 * activityLevel;
+            const talkProb = 0.08 * activityLevel;
+            const restProb = 0.04 * activityLevel;
 
-              if (actionRoll < walkProb) {
-                targetState = 'walking';
-                
-                const destinationRoll = Math.random();
-                if (destinationRoll < 0.3) {
-                  targetPos = kitchenTarget;
-                } else if (destinationRoll < 0.5) {
-                  targetPos = printerTarget;
-                } else if (destinationRoll < 0.7) {
-                  targetPos = meetingRoomTarget;
-                } else {
-                  targetPos = {
-                    x: 15 + Math.random() * 70,
-                    y: 20 + Math.random() * 55,
-                  };
-                }
-              } else if (actionRoll < walkProb + talkProb) {
-                targetState = 'talking';
-                const nearbyColleague = colleagues.find(
-                  (c) => c.id !== colleague.id && 
-                  getDistance(c.position, colleague.position) < 25 &&
-                  c.state !== 'away'
-                );
-                if (nearbyColleague) {
-                  targetPos = {
-                    x: (colleague.position.x + nearbyColleague.position.x) / 2,
-                    y: (colleague.position.y + nearbyColleague.position.y) / 2,
-                  };
-                } else {
-                  targetState = 'working';
-                  targetPos = colleague.deskPosition;
-                }
-              } else if (actionRoll < walkProb + talkProb + restProb) {
-                targetState = 'resting';
+            if (actionRoll < walkProb) {
+              targetState = 'walking';
+              const destinationRoll = Math.random();
+              if (destinationRoll < 0.25) {
                 targetPos = kitchenTarget;
+              } else if (destinationRoll < 0.45) {
+                targetPos = printerTarget;
+              } else if (destinationRoll < 0.65) {
+                targetPos = meetingRoomTarget;
+              } else {
+                targetPos = {
+                  x: 20 + Math.random() * 60,
+                  y: 25 + Math.random() * 45,
+                };
+              }
+              ctx.walkTargetPos = targetPos;
+            } else if (actionRoll < walkProb + talkProb) {
+              targetState = 'talking';
+              const nearbyColleague = colleagues.find(
+                (c) => c.id !== colleague.id && 
+                getDistance(c.position, colleague.position) < 25 &&
+                c.state !== 'away'
+              );
+              if (nearbyColleague) {
+                targetPos = {
+                  x: (colleague.position.x + nearbyColleague.position.x) / 2,
+                  y: (colleague.position.y + nearbyColleague.position.y) / 2,
+                };
+                ctx.walkTargetPos = targetPos;
               } else {
                 targetState = 'working';
                 targetPos = colleague.deskPosition;
               }
-              
-              ctx.lastActionTime = now;
+            } else if (actionRoll < walkProb + talkProb + restProb) {
+              targetState = 'walking';
+              targetPos = kitchenTarget;
+              ctx.walkTargetPos = targetPos;
             } else {
-              if (ctx.lastState === 'walking' && ctx.walkTargetPos) {
-                targetState = 'walking';
-                targetPos = ctx.walkTargetPos;
-              }
+              targetState = 'working';
+              targetPos = colleague.deskPosition;
+            }
+            
+            ctx.lastActionTime = now;
+          } else {
+            if (ctx.walkTargetPos && colleague.state === 'walking') {
+              targetState = 'walking';
+              targetPos = ctx.walkTargetPos;
+            } else {
+              targetState = colleague.state;
+              targetPos = colleague.deskPosition;
             }
           }
         }
@@ -236,36 +279,19 @@ export function useColleagueAI() {
           ctx.lastState = targetState;
         }
 
-        if (targetState === 'walking' || targetState === 'resting' || targetState === 'talking') {
-          const target = targetPos || colleague.deskPosition;
-          const speed = colleague.speed * deltaSeconds * 8;
-          const newPos = moveToward(colleague.position, target, speed);
+        if (targetState === 'away') {
+        } else if (targetState === 'walking' || targetState === 'talking') {
+          const speed = colleague.speed * deltaSeconds * 25;
+          const newPos = moveToward(colleague.position, targetPos, speed);
           updateColleaguePosition(colleague.id, newPos);
-          
-          if (targetPos && targetState === 'walking') {
-            ctx.walkStartPos = colleague.position;
-            ctx.walkTargetPos = targetPos;
-            ctx.walkStartTime = now;
-            ctx.walkDuration = getDistance(colleague.position, targetPos) / speed;
-          }
-          
-          if (targetPos && getDistance(colleague.position, targetPos) < 2) {
-            ctx.walkTargetPos = undefined;
-            if (targetState === 'walking') {
-              if (Math.random() < 0.4) {
-                updateColleagueState(colleague.id, 'working');
-                ctx.lastState = 'working';
-              } else if (Math.random() < 0.3) {
-                updateColleagueState(colleague.id, 'resting');
-                ctx.lastState = 'resting';
-              }
-              ctx.lastActionTime = now;
-            }
-          }
+        } else if (targetState === 'resting') {
+          const speed = colleague.speed * deltaSeconds * 20;
+          const newPos = moveToward(colleague.position, targetPos, speed);
+          updateColleaguePosition(colleague.id, newPos);
         } else if (targetState === 'working') {
           const dist = getDistance(colleague.position, colleague.deskPosition);
           if (dist > 1) {
-            const speed = colleague.speed * deltaSeconds * 12;
+            const speed = colleague.speed * deltaSeconds * 30;
             const newPos = moveToward(colleague.position, colleague.deskPosition, speed);
             updateColleaguePosition(colleague.id, newPos);
           }
