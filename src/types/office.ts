@@ -273,3 +273,26 @@ export interface ThemeState {
   currentTheme: OfficeThemeType;
   availableThemes: OfficeThemeType[];
 }
+
+export type CustomizableColorKey = keyof FurnitureColors | 'wallAccent' | 'floorPrimary';
+
+export interface CustomColorOverrides {
+  furniture: Partial<FurnitureColors>;
+  wallAccent?: string;
+}
+
+export interface CustomLayoutOverrides {
+  desks: DeskLayout[];
+  meetingRoom?: MeetingRoomLayout;
+  kitchen?: KitchenLayout;
+  printer?: Position;
+  acUnit?: Position;
+  door?: Position;
+}
+
+export interface DecorationCustomization {
+  colorOverrides: CustomColorOverrides;
+  layoutOverrides: CustomLayoutOverrides;
+  customObjects: OfficeObject[];
+  enabled: boolean;
+}

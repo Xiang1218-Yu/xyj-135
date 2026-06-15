@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType, OfficeThemeType, OfficeTheme } from '@/types/office';
+import type { Position, OfficeTime, AudioSource, Colleague, ViewPoint, TimeOfDay, WeatherState, WeatherType, AudioSourceType, BehaviorActionType, OfficeThemeType, OfficeTheme, DecorationCustomization, CustomColorOverrides, CustomLayoutOverrides, FurnitureColors, DeskLayout, OfficeObject } from '@/types/office';
 import { audioSources as initialAudioSources } from '@/data/audioSources';
 import { colleagues as initialColleagues } from '@/data/colleagues';
 import { viewPoints } from '@/data/viewPoints';
@@ -59,6 +59,17 @@ interface OfficeState {
   setOfficeTheme: (theme: OfficeThemeType) => void;
   getCurrentTheme: () => OfficeTheme;
   getAllThemes: () => OfficeTheme[];
+  customization: DecorationCustomization;
+  setCustomizationEnabled: (enabled: boolean) => void;
+  updateCustomFurnitureColor: (key: keyof FurnitureColors, color: string) => void;
+  updateCustomWallAccent: (color: string) => void;
+  updateCustomDeskPosition: (index: number, desk: Partial<DeskLayout>) => void;
+  updateCustomLayoutItem: <K extends keyof CustomLayoutOverrides>(key: K, value: CustomLayoutOverrides[K]) => void;
+  addCustomObject: (obj: OfficeObject) => void;
+  removeCustomObject: (id: string) => void;
+  updateCustomObject: (id: string, updates: Partial<OfficeObject>) => void;
+  resetCustomization: () => void;
+  getCustomizedTheme: () => OfficeTheme;
 }
 
 const currentHour = new Date().getHours();
@@ -94,6 +105,12 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   isTimePaused: false,
   colleagueSoundEvents: [],
   currentTheme: 'modern' as OfficeThemeType,
+  customization: {
+    colorOverrides: { furniture: {} },
+    layoutOverrides: { desks: [] },
+    customObjects: [],
+    enabled: false,
+  },
 
   setListenerPosition: (position) => set({ listenerPosition: position }),
   setZoom: (zoom) => set({ zoom: Math.max(0.5, Math.min(2, zoom)) }),
@@ -278,4 +295,125 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   getCurrentTheme: () => getOfficeTheme(get().currentTheme),
 
   getAllThemes: () => getAllThemes(),
+
+  setCustomizationEnabled: (enabled) =>
+    set((state) => ({
+      customization: { ...state.customization, enabled },
+    })),
+
+  updateCustomFurnitureColor: (key, color) =>
+    set((state) => ({
+      customization: {
+        ...state.customization,
+        colorOverrides: {
+          ...state.customization.colorOverrides,
+          furniture: { ...state.customization.colorOverrides.furniture, [key]: color },
+        },
+      },
+    })),
+
+  updateCustomWallAccent: (color) =>
+    set((state) => ({
+      customization: {
+        ...state.customization,
+        colorOverrides: { ...state.customization.colorOverrides, wallAccent: color },
+      },
+    })),
+
+  updateCustomDeskPosition: (index, desk) =>
+    set((state) => {
+      const desks = [...state.customization.layoutOverrides.desks];
+      if (desks[index]) {
+        desks[index] = { ...desks[index], ...desk };
+      }
+      return {
+        customization: {
+          ...state.customization,
+          layoutOverrides: { ...state.customization.layoutOverrides, desks },
+        },
+      };
+    }),
+
+  updateCustomLayoutItem: (key, value) =>
+    set((state) => ({
+      customization: {
+        ...state.customization,
+        layoutOverrides: { ...state.customization.layoutOverrides, [key]: value },
+      },
+    })),
+
+  addCustomObject: (obj) =>
+    set((state) => ({
+      customization: {
+        ...state.customization,
+        customObjects: [...state.customization.customObjects, obj],
+      },
+    })),
+
+  removeCustomObject: (id) =>
+    set((state) => ({
+      customization: {
+        ...state.customization,
+        customObjects: state.customization.customObjects.filter((o) => o.id !== id),
+      },
+    })),
+
+  updateCustomObject: (id, updates) =>
+    set((state) => ({
+      customization: {
+        ...state.customization,
+        customObjects: state.customization.customObjects.map((o) =>
+          o.id === id ? { ...o, ...updates } : o
+        ),
+      },
+    })),
+
+  resetCustomization: () =>
+    set({
+      customization: {
+        colorOverrides: { furniture: {} },
+        layoutOverrides: { desks: [] },
+        customObjects: [],
+        enabled: false,
+      },
+    }),
+
+  getCustomizedTheme: () => {
+    const state = get();
+    const baseTheme = getOfficeTheme(state.currentTheme);
+    if (!state.customization.enabled) return baseTheme;
+
+    const { colorOverrides, layoutOverrides, customObjects } = state.customization;
+
+    const mergedFurniture: FurnitureColors = {
+      ...baseTheme.furniture,
+      ...colorOverrides.furniture,
+    };
+
+    const mergedWalls = colorOverrides.wallAccent
+      ? { ...baseTheme.walls, accentColor: colorOverrides.wallAccent }
+      : baseTheme.walls;
+
+    const baseDesks = layoutOverrides.desks.length > 0
+      ? layoutOverrides.desks
+      : baseTheme.layout.desks;
+
+    const mergedLayout = {
+      ...baseTheme.layout,
+      desks: baseDesks,
+      ...(layoutOverrides.meetingRoom && { meetingRoom: layoutOverrides.meetingRoom }),
+      ...(layoutOverrides.kitchen && { kitchen: layoutOverrides.kitchen }),
+      ...(layoutOverrides.printer && { printer: layoutOverrides.printer }),
+      ...(layoutOverrides.acUnit && { acUnit: layoutOverrides.acUnit }),
+      ...(layoutOverrides.door && { door: layoutOverrides.door }),
+      extraObjects: [...baseTheme.layout.extraObjects, ...customObjects],
+    };
+
+    return {
+      ...baseTheme,
+      furniture: mergedFurniture,
+      walls: mergedWalls,
+      layout: mergedLayout,
+    };
+  },
 }));

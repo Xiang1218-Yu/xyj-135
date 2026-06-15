@@ -1163,8 +1163,8 @@ function Walls({ theme, timeOfDay }: { theme: OfficeTheme; timeOfDay: string }) 
 }
 
 export function OfficeLayout() {
-  const { time, getCurrentTheme } = useOfficeStore();
-  const theme = getCurrentTheme();
+  const { time, getCustomizedTheme } = useOfficeStore();
+  const theme = getCustomizedTheme();
   const timeOfDay = getTimeOfDay(time.hour);
   const { layout, furniture } = theme;
 
