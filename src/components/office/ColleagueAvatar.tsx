@@ -21,20 +21,27 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         left: `${colleague.position.x}%`,
         top: `${colleague.position.y}%`,
         zIndex: Math.floor(colleague.position.y * 10),
+        transformStyle: 'preserve-3d',
       }}
     >
       <div
-        className={`relative ${isWalking ? 'animate-bounce' : ''}`}
-        style={{ width: '24px', height: '36px' }}
+        className={`relative ${isWalking ? '' : ''}`}
+        style={{
+          width: '20px',
+          height: '40px',
+          transform: 'rotateZ(45deg) rotateX(-60deg)',
+          transformStyle: 'preserve-3d',
+        }}
       >
         <div
           className="absolute left-1/2 top-0 transform -translate-x-1/2 rounded-full"
           style={{
-            width: '14px',
-            height: '14px',
+            width: '12px',
+            height: '12px',
             backgroundColor: '#FFE4C4',
             border: '1px solid rgba(0,0,0,0.1)',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+            transform: 'translateZ(2px)',
           }}
         >
           <div
@@ -53,10 +60,24 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         <div
           className="absolute top-3 left-1/2 transform -translate-x-1/2 rounded-t-sm"
           style={{
-            width: '16px',
-            height: '18px',
+            width: '14px',
+            height: '16px',
             backgroundColor: colleague.color,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
+            transform: 'translateZ(1px)',
+          }}
+        />
+        
+        <div
+          className="absolute left-1/2 transform -translate-x-1/2"
+          style={{
+            bottom: '-6px',
+            width: '10px',
+            height: '8px',
+            backgroundColor: colleague.color,
+            filter: 'brightness(0.85)',
+            transform: 'translateX(-50%) rotateX(90deg)',
+            transformOrigin: 'top center',
           }}
         />
         
@@ -65,8 +86,8 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
             isWalking ? 'animate-pulse' : ''
           }`}
           style={{
-            width: '12px',
-            height: '6px',
+            width: '10px',
+            height: '5px',
           }}
         >
           <div
@@ -87,16 +108,18 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         
         {isWorking && (
           <div
-            className="absolute -right-1 top-4 w-3 h-2 bg-gray-300 rounded-sm"
+            className="absolute -right-2 top-4 w-2.5 h-1.5 bg-gray-300 rounded-sm"
             style={{
               animation: 'typing 0.5s infinite alternate',
+              transform: 'translateZ(3px)',
             }}
           />
         )}
         
         {isTalking && (
           <div
-            className="absolute -top-4 left-1/2 transform -translate-x-1/2"
+            className="absolute -top-5 left-1/2 transform -translate-x-1/2"
+            style={{ transform: 'translateZ(5px)' }}
           >
             <div className="flex gap-0.5">
               <div
@@ -117,22 +140,33 @@ export function ColleagueAvatar({ colleague }: ColleagueAvatarProps) {
         
         {isResting && (
           <div
-            className="absolute -top-3 right-0 text-xs"
+            className="absolute -top-2 right-0 text-xs"
+            style={{ transform: 'translateZ(5px)' }}
           >
             ☕
           </div>
         )}
       </div>
       
-      <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-xs text-gray-600 whitespace-nowrap font-medium">
+      <div
+        className="absolute left-1/2 text-xs text-gray-600 whitespace-nowrap font-medium"
+        style={{
+          bottom: '-18px',
+          transform: 'translateX(-50%) rotateZ(45deg) rotateX(-60deg)',
+        }}
+      >
         {colleague.name}
       </div>
       
       <div
-        className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 rounded-full bg-black opacity-20 blur-sm"
+        className="absolute left-1/2 rounded-full bg-black"
         style={{
-          width: '16px',
-          height: '4px',
+          bottom: '-2px',
+          width: '14px',
+          height: '6px',
+          transform: 'translateX(-50%) rotateX(90deg)',
+          opacity: 0.25,
+          filter: 'blur(2px)',
         }}
       />
     </div>

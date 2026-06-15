@@ -14,6 +14,7 @@ export function OfficeScene() {
     zoom, 
     colleagues, 
     setListenerPosition,
+    setZoom,
     isPlaying,
   } = useOfficeStore();
   
@@ -44,8 +45,8 @@ export function OfficeScene() {
     const dx = ((clientX - dragStart.x) / rect.width) * 100 / zoom;
     const dy = ((clientY - dragStart.y) / rect.height) * 100 / zoom;
     
-    const newX = Math.max(10, Math.min(90, startPos.x - dx));
-    const newY = Math.max(10, Math.min(90, startPos.y - dy));
+    const newX = Math.max(15, Math.min(85, startPos.x - dx));
+    const newY = Math.max(20, Math.min(80, startPos.y - dy));
     
     setListenerPosition({ x: newX, y: newY });
   };
@@ -56,6 +57,9 @@ export function OfficeScene() {
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    const newZoom = Math.max(0.6, Math.min(2.5, zoom + delta));
+    setZoom(newZoom);
   };
 
   useEffect(() => {
@@ -73,22 +77,38 @@ export function OfficeScene() {
     };
   }, [isDragging, dragStart, startPos, zoom]);
 
+  const offsetX = (50 - listenerPosition.x) * 2;
+  const offsetY = (50 - listenerPosition.y) * 1.5;
+
   return (
     <div 
       ref={containerRef}
       className="relative w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none"
       onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
       onWheel={handleWheel}
-      style={{ perspective: '1000px' }}
+      style={{ perspective: '1500px' }}
     >
       <div
-        className="absolute w-[200%] h-[200%] transition-transform duration-300 ease-out"
+        className="absolute left-1/2 top-1/2 w-[200%] h-[200%]"
         style={{
-          transform: `translate(${-listenerPosition.x + 25}%, ${-listenerPosition.y + 25}%) scale(${zoom})`,
-          transformOrigin: 'center center',
+          transformStyle: 'preserve-3d',
+          transform: `
+            translate(-50%, -50%)
+            translate3d(${offsetX}%, ${offsetY}%, 0)
+            scale(${zoom})
+            rotateX(60deg)
+            rotateZ(-45deg)
+          `,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
         }}
       >
-        <div className="absolute inset-0 w-1/2 h-1/2 left-1/4 top-1/4">
+        <div
+          className="absolute left-1/2 top-1/2 w-[70%] h-[70%]"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
           <Lighting />
           <OfficeLayout />
           
@@ -97,21 +117,26 @@ export function OfficeScene() {
           ))}
           
           <div
-            className="absolute w-6 h-6 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
+            className="absolute w-8 h-8 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
             style={{
               left: '50%',
               top: '50%',
+              transform: 'translate(-50%, -50%) rotateZ(45deg)',
             }}
           >
             <div className="absolute inset-0 rounded-full border-2 border-orange-400 animate-ping opacity-30" />
             <div className="absolute inset-1 rounded-full border-2 border-orange-500" />
-            <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-orange-500 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute top-1/2 left-1/2 w-2.5 h-2.5 bg-orange-500 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
           </div>
         </div>
       </div>
       
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-sm text-gray-500 bg-white/80 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-sm">
-        拖动鼠标探索办公室
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 text-sm text-gray-600 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
+        <span>🖱️ 拖动探索</span>
+        <span className="text-gray-300">|</span>
+        <span>🔍 滚轮缩放</span>
+        <span className="text-gray-300">|</span>
+        <span className="text-orange-500 font-medium">{Math.round(zoom * 100)}%</span>
       </div>
     </div>
   );

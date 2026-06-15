@@ -12,12 +12,15 @@ export function useTimeSimulation() {
       const deltaMs = now - lastTimeRef.current;
       lastTimeRef.current = now;
       
-      const deltaMinutes = (deltaMs / 1000 / 60) * 60 * time.speed / 60;
+      const deltaSeconds = deltaMs / 1000;
+      const deltaMinutes = deltaSeconds * time.speed;
+      
       updateTime(deltaMinutes);
       
       animationFrameRef.current = requestAnimationFrame(tick);
     };
 
+    lastTimeRef.current = Date.now();
     animationFrameRef.current = requestAnimationFrame(tick);
 
     return () => {
