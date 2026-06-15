@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useOfficeStore } from '@/store/useOfficeStore';
 import { calculateVolume, calculatePan } from '@/utils/audioUtils';
-import type { AudioSource } from '@/types/office';
+import type { AudioSource, KeyboardType } from '@/types/office';
+import { keyboardVolumeByType, keyboardTimingByType } from '@/data/audioSources';
 
 function createNoiseBuffer(audioContext: AudioContext, type: 'white' | 'pink' | 'brown' = 'white'): AudioBuffer {
   const bufferSize = 2 * audioContext.sampleRate;
@@ -39,18 +40,95 @@ function createNoiseBuffer(audioContext: AudioContext, type: 'white' | 'pink' | 
   return buffer;
 }
 
-function createKeyboardSound(audioContext: AudioContext): AudioBuffer {
-  const duration = 0.05;
-  const sampleRate = audioContext.sampleRate;
+function createKeyboardSound(
+  audioContext: AudioContext,
+  keyboardType: KeyboardType,
+  velocity: number = 0.7
+): AudioBuffer {
+  let duration = 0.05;
+  let sampleRate = audioContext.sampleRate;
+  let baseFreq = 800;
+  let noiseMix = 0.7;
+  let clickMix = 0.3;
+  let attack = 0.002;
+  let decay = 80;
+  let brightness = 1.0;
+  
+  switch (keyboardType) {
+    case 'mechanical-loud':
+      duration = 0.06;
+      baseFreq = 900 + Math.random() * 200;
+      noiseMix = 0.6;
+      clickMix = 0.5;
+      decay = 60;
+      brightness = 1.2;
+      break;
+    case 'mechanical-quiet':
+      duration = 0.045;
+      baseFreq = 700 + Math.random() * 150;
+      noiseMix = 0.5;
+      clickMix = 0.4;
+      decay = 90;
+      brightness = 0.9;
+      break;
+    case 'membrane':
+      duration = 0.04;
+      baseFreq = 500 + Math.random() * 100;
+      noiseMix = 0.8;
+      clickMix = 0.2;
+      decay = 100;
+      brightness = 0.7;
+      break;
+    case 'laptop':
+      duration = 0.035;
+      baseFreq = 400 + Math.random() * 80;
+      noiseMix = 0.7;
+      clickMix = 0.15;
+      decay = 120;
+      brightness = 0.5;
+      break;
+  }
+  
+  baseFreq *= (0.9 + Math.random() * 0.2);
+  const volumeAdjust = 0.5 + velocity * 0.5;
+  
   const buffer = audioContext.createBuffer(1, Math.floor(duration * sampleRate), sampleRate);
   const data = buffer.getChannelData(0);
   
+  const keyType = Math.random();
+  let keyClickFreq = baseFreq;
+  let keyNoiseMix = noiseMix;
+  let keyClickMix = clickMix;
+  
+  if (keyType < 0.7) {
+  } else if (keyType < 0.85) {
+    keyClickFreq = baseFreq * 1.3;
+    keyClickMix *= 1.2;
+    keyNoiseMix *= 1.1;
+  } else if (keyType < 0.95) {
+    keyClickFreq = baseFreq * 0.7;
+    keyClickMix *= 1.1;
+  } else {
+    duration *= 2;
+    decay *= 0.6;
+    keyClickMix *= 1.3;
+  }
+  
   for (let i = 0; i < data.length; i++) {
     const t = i / sampleRate;
-    const envelope = Math.exp(-t * 80);
-    const noise = Math.random() * 2 - 1;
-    const click = Math.sin(2 * Math.PI * 800 * t) * 0.3;
-    data[i] = (noise * 0.7 + click) * envelope * 0.5;
+    
+    let envelope: number;
+    if (t < attack) {
+      envelope = t / attack;
+    } else {
+      envelope = Math.exp(-(t - attack) * decay);
+    }
+    
+    const noise = (Math.random() * 2 - 1) * brightness;
+    const click = Math.sin(2 * Math.PI * keyClickFreq * t + Math.sin(2 * Math.PI * keyClickFreq * 0.5 * t) * 0.2) * 0.3;
+    const body = Math.sin(2 * Math.PI * keyClickFreq * 0.5 * t) * 0.2;
+    
+    data[i] = (noise * keyNoiseMix + click * keyClickMix + body * 0.3) * envelope * 0.5 * volumeAdjust;
   }
   
   return buffer;
@@ -194,12 +272,21 @@ interface RandomSoundConfig {
   timeoutId?: number;
 }
 
+interface TypingState {
+  source: AudioSource;
+  isTyping: boolean;
+  burstCount: number;
+  nextKeyTime: number;
+  pauseUntil: number;
+  timeoutId?: number;
+}
+
 export function useAudioEngine() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const loopSoundsRef = useRef<Map<string, SoundInstance>>(new Map());
   const randomSoundsRef = useRef<Map<string, RandomSoundConfig>>(new Map());
+  const typingStatesRef = useRef<Map<string, TypingState>>(new Map());
   const noiseBufferRef = useRef<AudioBuffer | null>(null);
-  const keyboardBufferRef = useRef<AudioBuffer | null>(null);
   const mouseBufferRef = useRef<AudioBuffer | null>(null);
   const coffeeBufferRef = useRef<AudioBuffer | null>(null);
   const printerBufferRef = useRef<AudioBuffer | null>(null);
@@ -212,7 +299,7 @@ export function useAudioEngine() {
   const masterVolumeRef = useRef(0.7);
   const isMutedRef = useRef(false);
 
-  const { audioSources, listenerPosition, masterVolume, isMuted, isPlaying } = useOfficeStore();
+  const { audioSources, colleagues, listenerPosition, masterVolume, isMuted, isPlaying } = useOfficeStore();
 
   useEffect(() => {
     listenerPosRef.current = listenerPosition;
@@ -238,7 +325,6 @@ export function useAudioEngine() {
       masterGainRef.current.connect(ctx.destination);
       
       noiseBufferRef.current = createNoiseBuffer(ctx, 'pink');
-      keyboardBufferRef.current = createKeyboardSound(ctx);
       mouseBufferRef.current = createMouseClickSound(ctx);
       coffeeBufferRef.current = createCoffeeMachineSound(ctx);
       printerBufferRef.current = createPrinterSound(ctx);
@@ -255,11 +341,14 @@ export function useAudioEngine() {
     return audioContextRef.current;
   }, []);
 
-  const getBufferForType = useCallback((type: AudioSource['type']): AudioBuffer | null => {
+  const getBufferForType = useCallback((type: AudioSource['type'], keyboardType?: KeyboardType, velocity?: number): AudioBuffer | null => {
+    const ctx = audioContextRef.current;
+    if (!ctx) return null;
+    
     switch (type) {
       case 'keyboard':
       case 'typing':
-        return keyboardBufferRef.current;
+        return createKeyboardSound(ctx, keyboardType || 'membrane', velocity);
       case 'mouse':
         return mouseBufferRef.current;
       case 'coffee':
@@ -351,11 +440,11 @@ export function useAudioEngine() {
     loopSoundsRef.current.set(source.id, { source: soundSource, gainNode, pannerNode });
   }, [getBufferForType, calculateCurrentVolume, calculateCurrentPan]);
 
-  const playOneShot = useCallback((source: AudioSource) => {
+  const playOneShot = useCallback((source: AudioSource, velocity?: number) => {
     const ctx = audioContextRef.current;
     if (!ctx || !masterGainRef.current) return;
     
-    const buffer = getBufferForType(source.type);
+    const buffer = getBufferForType(source.type, source.keyboardType, velocity);
     if (!buffer) return;
 
     const soundSource = ctx.createBufferSource();
@@ -395,6 +484,69 @@ export function useAudioEngine() {
     randomSoundsRef.current.set(source.id, { source, minInterval, maxInterval, timeoutId });
   }, [playOneShot]);
 
+  const scheduleTyping = useCallback((source: AudioSource) => {
+    const keyboardType = source.keyboardType || 'membrane';
+    const typingSpeed = source.typingSpeed || 0.3;
+    const timingConfig = keyboardTimingByType[keyboardType];
+    const baseVolume = keyboardVolumeByType[keyboardType];
+    const sourceWithVolume = { ...source, baseVolume };
+    
+    const state: TypingState = {
+      source: sourceWithVolume,
+      isTyping: false,
+      burstCount: 0,
+      nextKeyTime: 0,
+      pauseUntil: 0,
+    };
+    
+    typingStatesRef.current.set(source.id, state);
+    
+    const typeNextKey = () => {
+      const now = Date.now();
+      const typingState = typingStatesRef.current.get(source.id);
+      if (!typingState) return;
+      
+      const owner = colleagues.find(c => c.id === source.ownerId);
+      const isOwnerWorking = owner && owner.state === 'working';
+      
+      if (!isOwnerWorking || source.muted) {
+        typingState.timeoutId = window.setTimeout(typeNextKey, 500);
+        return;
+      }
+      
+      if (!typingState.isTyping) {
+        if (Math.random() < 0.4 * typingSpeed) {
+          typingState.isTyping = true;
+          typingState.burstCount = Math.floor(3 + Math.random() * 15);
+          typingState.nextKeyTime = now;
+        } else {
+          typingState.timeoutId = window.setTimeout(typeNextKey, 1000 + Math.random() * 2000);
+          return;
+        }
+      }
+      
+      if (typingState.burstCount > 0) {
+        if (now >= typingState.nextKeyTime) {
+          const velocity = 0.4 + Math.random() * 0.6;
+          playOneShot(typingState.source, velocity);
+          typingState.burstCount--;
+          
+          const keyInterval = (timingConfig.min + Math.random() * (timingConfig.max - timingConfig.min)) / typingSpeed;
+          const burstGap = Math.random() < timingConfig.burstiness ? keyInterval * 3 : keyInterval;
+          typingState.nextKeyTime = now + burstGap * 1000;
+        }
+        typingState.timeoutId = window.setTimeout(typeNextKey, 20);
+      } else {
+        typingState.isTyping = false;
+        const pauseTime = 500 + Math.random() * 3000 / typingSpeed;
+        typingState.pauseUntil = now + pauseTime;
+        typingState.timeoutId = window.setTimeout(typeNextKey, pauseTime);
+      }
+    };
+    
+    state.timeoutId = window.setTimeout(typeNextKey, 1000 + Math.random() * 2000);
+  }, [colleagues, playOneShot]);
+
   const startAllSounds = useCallback(() => {
     initAudioContext();
     const ctx = audioContextRef.current;
@@ -412,17 +564,23 @@ export function useAudioEngine() {
     });
     randomSoundsRef.current.clear();
     
+    typingStatesRef.current.forEach((state) => {
+      if (state.timeoutId) {
+        clearTimeout(state.timeoutId);
+      }
+    });
+    typingStatesRef.current.clear();
+    
     audioSources.forEach((source) => {
       if (source.loop) {
         playLoopSound(source);
+      } else if (source.type === 'keyboard' || source.type === 'typing') {
+        scheduleTyping(source);
       } else {
         let minInterval = 3;
         let maxInterval = 10;
         
-        if (source.type === 'keyboard' || source.type === 'typing') {
-          minInterval = 0.1;
-          maxInterval = 0.8;
-        } else if (source.type === 'mouse') {
+        if (source.type === 'mouse') {
           minInterval = 0.5;
           maxInterval = 3;
         } else if (source.type === 'door') {
@@ -436,7 +594,7 @@ export function useAudioEngine() {
         scheduleRandomSound(source, minInterval, maxInterval);
       }
     });
-  }, [audioSources, initAudioContext, playLoopSound, scheduleRandomSound]);
+  }, [audioSources, initAudioContext, playLoopSound, scheduleRandomSound, scheduleTyping]);
 
   const stopAllSounds = useCallback(() => {
     loopSoundsRef.current.forEach((sound) => {
@@ -450,6 +608,13 @@ export function useAudioEngine() {
       }
     });
     randomSoundsRef.current.clear();
+    
+    typingStatesRef.current.forEach((state) => {
+      if (state.timeoutId) {
+        clearTimeout(state.timeoutId);
+      }
+    });
+    typingStatesRef.current.clear();
   }, []);
 
   useEffect(() => {

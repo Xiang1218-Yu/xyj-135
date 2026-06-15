@@ -24,7 +24,12 @@ export interface AudioSource {
   muted: boolean;
   loop: boolean;
   category: 'work' | 'social' | 'utility' | 'ambient';
+  keyboardType?: KeyboardType;
+  typingSpeed?: number;
+  ownerId?: string;
 }
+
+export type KeyboardType = 'mechanical-loud' | 'mechanical-quiet' | 'membrane' | 'laptop';
 
 export type ColleagueState = 'working' | 'walking' | 'talking' | 'resting' | 'away';
 
@@ -36,6 +41,8 @@ export interface Colleague {
   state: ColleagueState;
   targetPosition?: Position;
   deskPosition: Position;
+  keyboardType: KeyboardType;
+  typingSpeed: number;
   schedule: {
     arriveTime: number;
     lunchStart: number;
