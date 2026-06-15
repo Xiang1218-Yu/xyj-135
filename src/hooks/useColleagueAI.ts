@@ -35,18 +35,6 @@ function getActivityLevel(hour: number): number {
   return 0.1;
 }
 
-function isWalkingAnimation(
-  current: Position,
-  target: Position,
-  progress: number
-): Position {
-  const t = Math.min(1, Math.max(0, progress));
-  return {
-    x: current.x + (target.x - current.x) * t,
-    y: current.y + (target.y - current.y) * t,
-  };
-}
-
 interface ColleagueContext {
   id: string;
   walkStartPos?: Position;
@@ -55,6 +43,7 @@ interface ColleagueContext {
   walkDuration?: number;
   lastState: ColleagueState;
   lastActionTime: number;
+  initialized: boolean;
 }
 
 export function useColleagueAI() {
@@ -62,19 +51,62 @@ export function useColleagueAI() {
   const animationFrameRef = useRef<number>();
   const lastUpdateRef = useRef<number>(Date.now());
   const colleagueContexts = useRef<Map<string, ColleagueContext>>(new Map());
+  const firstRunRef = useRef(true);
 
   useEffect(() => {
-    const now = Date.now();
-    
-    colleagues.forEach((c) => {
-      if (!colleagueContexts.current.has(c.id)) {
+    if (firstRunRef.current) {
+      firstRunRef.current = false;
+      const now = Date.now();
+      const currentHour = time.hour + time.minute / 60;
+      
+      colleagues.forEach((c) => {
+        let initialState: ColleagueState = c.state;
+        let initialPos = { ...c.position };
+        
+        if (currentHour < c.schedule.arriveTime) {
+          initialState = 'away';
+          initialPos = { ...entranceTarget };
+        } else if (
+          currentHour >= c.schedule.lunchStart &&
+          currentHour < c.schedule.lunchEnd
+        ) {
+          initialState = 'resting';
+          initialPos = { ...kitchenTarget };
+        } else if (currentHour >= c.schedule.leaveTime) {
+          initialState = 'away';
+          initialPos = { ...entranceTarget };
+        } else {
+          initialState = 'working';
+          initialPos = { ...c.deskPosition };
+        }
+        
+        if (c.state !== initialState) {
+          updateColleagueState(c.id, initialState);
+        }
+        if (getDistance(c.position, initialPos) > 1) {
+          updateColleaguePosition(c.id, initialPos);
+        }
+        
         colleagueContexts.current.set(c.id, {
           id: c.id,
-          lastState: c.state,
+          lastState: initialState,
           lastActionTime: now,
+          initialized: true,
         });
-      }
-    });
+      });
+    } else {
+      const now = Date.now();
+      colleagues.forEach((c) => {
+        if (!colleagueContexts.current.has(c.id)) {
+          colleagueContexts.current.set(c.id, {
+            id: c.id,
+            lastState: c.state,
+            lastActionTime: now,
+            initialized: true,
+          });
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -84,6 +116,11 @@ export function useColleagueAI() {
       lastUpdateRef.current = now;
       
       const deltaSeconds = deltaMs / 1000;
+
+      if (time.isPaused) {
+        animationFrameRef.current = requestAnimationFrame(tick);
+        return;
+      }
 
       colleagues.forEach((colleague) => {
         const currentHour = time.hour + time.minute / 60;
@@ -101,12 +138,17 @@ export function useColleagueAI() {
           currentHour >= colleague.schedule.lunchStart &&
           currentHour < colleague.schedule.lunchEnd
         ) {
-          if (Math.random() < 0.7) {
-            targetState = 'resting';
-            targetPos = kitchenTarget;
+          if (colleague.state === 'working' || colleague.state === 'talking' || colleague.state === 'walking') {
+            if (Math.random() < 0.7) {
+              targetState = 'resting';
+              targetPos = kitchenTarget;
+            } else {
+              targetState = 'away';
+              targetPos = entranceTarget;
+            }
           } else {
-            targetState = 'away';
-            targetPos = entranceTarget;
+            targetState = colleague.state;
+            targetPos = colleague.state === 'resting' ? kitchenTarget : entranceTarget;
           }
         } else if (currentHour >= colleague.schedule.leaveTime) {
           if (colleague.state !== 'away') {
@@ -117,60 +159,74 @@ export function useColleagueAI() {
             }
           }
         } else {
-          const timeSinceLastAction = now - ctx.lastActionTime;
-          const actionInterval = 3000 + Math.random() * (7000 / activityLevel);
-          
-          if (timeSinceLastAction > actionInterval && activityLevel > 0.2) {
-            const actionRoll = Math.random();
-            const walkProb = 0.15 * activityLevel;
-            const talkProb = 0.1 * activityLevel;
-            const restProb = 0.05 * activityLevel;
+          if (colleague.state === 'away') {
+            targetState = 'walking';
+            targetPos = colleague.deskPosition;
+            if (getDistance(colleague.position, colleague.deskPosition) < 2) {
+              targetState = 'working';
+            }
+          } else if (colleague.state === 'resting') {
+            targetState = 'walking';
+            targetPos = colleague.deskPosition;
+            if (getDistance(colleague.position, colleague.deskPosition) < 2) {
+              targetState = 'working';
+            }
+          } else {
+            const timeSinceLastAction = now - ctx.lastActionTime;
+            const actionInterval = 3000 + Math.random() * (7000 / activityLevel);
+            
+            if (timeSinceLastAction > actionInterval && activityLevel > 0.2) {
+              const actionRoll = Math.random();
+              const walkProb = 0.15 * activityLevel;
+              const talkProb = 0.1 * activityLevel;
+              const restProb = 0.05 * activityLevel;
 
-            if (actionRoll < walkProb) {
-              targetState = 'walking';
-              
-              const destinationRoll = Math.random();
-              if (destinationRoll < 0.3) {
+              if (actionRoll < walkProb) {
+                targetState = 'walking';
+                
+                const destinationRoll = Math.random();
+                if (destinationRoll < 0.3) {
+                  targetPos = kitchenTarget;
+                } else if (destinationRoll < 0.5) {
+                  targetPos = printerTarget;
+                } else if (destinationRoll < 0.7) {
+                  targetPos = meetingRoomTarget;
+                } else {
+                  targetPos = {
+                    x: 15 + Math.random() * 70,
+                    y: 20 + Math.random() * 55,
+                  };
+                }
+              } else if (actionRoll < walkProb + talkProb) {
+                targetState = 'talking';
+                const nearbyColleague = colleagues.find(
+                  (c) => c.id !== colleague.id && 
+                  getDistance(c.position, colleague.position) < 25 &&
+                  c.state !== 'away'
+                );
+                if (nearbyColleague) {
+                  targetPos = {
+                    x: (colleague.position.x + nearbyColleague.position.x) / 2,
+                    y: (colleague.position.y + nearbyColleague.position.y) / 2,
+                  };
+                } else {
+                  targetState = 'working';
+                  targetPos = colleague.deskPosition;
+                }
+              } else if (actionRoll < walkProb + talkProb + restProb) {
+                targetState = 'resting';
                 targetPos = kitchenTarget;
-              } else if (destinationRoll < 0.5) {
-                targetPos = printerTarget;
-              } else if (destinationRoll < 0.7) {
-                targetPos = meetingRoomTarget;
-              } else {
-                targetPos = {
-                  x: 15 + Math.random() * 70,
-                  y: 20 + Math.random() * 55,
-                };
-              }
-            } else if (actionRoll < walkProb + talkProb) {
-              targetState = 'talking';
-              const nearbyColleague = colleagues.find(
-                (c) => c.id !== colleague.id && 
-                getDistance(c.position, colleague.position) < 25 &&
-                c.state !== 'away'
-              );
-              if (nearbyColleague) {
-                targetPos = {
-                  x: (colleague.position.x + nearbyColleague.position.x) / 2,
-                  y: (colleague.position.y + nearbyColleague.position.y) / 2,
-                };
               } else {
                 targetState = 'working';
                 targetPos = colleague.deskPosition;
               }
-            } else if (actionRoll < walkProb + talkProb + restProb) {
-              targetState = 'resting';
-              targetPos = kitchenTarget;
+              
+              ctx.lastActionTime = now;
             } else {
-              targetState = 'working';
-              targetPos = colleague.deskPosition;
-            }
-            
-            ctx.lastActionTime = now;
-          } else {
-            if (ctx.lastState === 'walking' && ctx.walkTargetPos) {
-              targetState = 'walking';
-              targetPos = ctx.walkTargetPos;
+              if (ctx.lastState === 'walking' && ctx.walkTargetPos) {
+                targetState = 'walking';
+                targetPos = ctx.walkTargetPos;
+              }
             }
           }
         }
